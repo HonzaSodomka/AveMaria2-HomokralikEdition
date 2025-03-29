@@ -88,22 +88,8 @@ public:
         glm::vec3 const& rotation = glm::vec3(0.0f),
         glm::vec3 const& scale_change = glm::vec3(1.0f)) {
 
-        // Výpoèet kompletní transformaèní matice
-        glm::mat4 t = glm::translate(glm::mat4(1.0f), origin);
-        glm::mat4 rx = glm::rotate(glm::mat4(1.0f), orientation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::mat4 ry = glm::rotate(glm::mat4(1.0f), orientation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 rz = glm::rotate(glm::mat4(1.0f), orientation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-        glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
-
-        // Dodateèné transformace
-        glm::mat4 m_off = glm::translate(glm::mat4(1.0f), offset);
-        glm::mat4 m_rx = glm::rotate(glm::mat4(1.0f), rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
-        glm::mat4 m_ry = glm::rotate(glm::mat4(1.0f), rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 m_rz = glm::rotate(glm::mat4(1.0f), rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
-        glm::mat4 m_s = glm::scale(glm::mat4(1.0f), scale_change);
-
-        // Kombinace všech transformací
-        glm::mat4 model_matrix = local_model_matrix * s * rz * ry * rx * t * m_s * m_rz * m_ry * m_rx * m_off;
+        // Aktivace shaderu
+        shader.activate();
 
         // Vykreslení všech meshù
         for (auto& mesh : meshes) {
@@ -113,6 +99,7 @@ public:
 
     // Pøetížený draw s pøímým zadáním model matice
     void draw(glm::mat4 const& model_matrix) {
+        shader.activate();
         for (auto& mesh : meshes) {
             mesh.draw();
         }
