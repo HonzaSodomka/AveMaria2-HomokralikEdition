@@ -36,6 +36,12 @@ App::~App() {
         delete wall;
     }
     maze_walls.clear();
+
+    // Uvolnìní transparentních králíkù
+    for (auto& bunny : transparent_bunnies) {
+        delete bunny;
+    }
+    transparent_bunnies.clear();
 }
 
 bool App::init(GLFWwindow* win) {
@@ -64,6 +70,10 @@ bool App::init(GLFWwindow* win) {
 
     // Povolení Z-bufferu pro správné vykreslování 3D modelù
     glEnable(GL_DEPTH_TEST);
+
+    // Nastavení pro prùhlednost
+    glDepthFunc(GL_LEQUAL);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Získání velikosti framebufferu
     glfwGetFramebufferSize(window, &width, &height);
@@ -105,6 +115,56 @@ void App::init_assets() {
     catch (const std::exception& e) {
         std::cerr << "Maze creation error: " << e.what() << std::endl;
         throw;
+    }
+
+    // Vytvoøení transparentních králíkù
+    try {
+        std::cout << "Creating transparent bunnies..." << std::endl;
+        createTransparentBunnies();
+        std::cout << "Transparent bunnies created successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Transparent bunnies creation error: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+void App::createTransparentBunnies() {
+    // Naètení textury pro králíky
+    GLuint bunnyTexture = textureInit("resources/textures/kralik.jpg");
+
+    // Pozice pro králíky v bludišti
+    std::vector<glm::vec3> bunny_positions = {
+        glm::vec3(0.0f, 5.0f, 3.0f),   // První králík
+        glm::vec3(20.0f, 5.0f, 7.0f),   // Druhý králík
+        glm::vec3(40.0f, 5.0f, 5.0f)   // Tøetí králík
+    };
+
+    // Barvy pro králíky (RGBA, kde A je prùhlednost) - NIŽŠÍ HODNOTY ALPHA
+    std::vector<glm::vec4> bunny_colors = {
+        glm::vec4(1.0f, 0.3f, 0.3f, 0.8f),   // Èervený více prùhledný 
+        glm::vec4(0.3f, 1.0f, 0.3f, 0.6f),   // Zelený ještì více prùhledný
+        glm::vec4(0.3f, 0.3f, 1.0f, 0.4f)    // Modrý nejvíce prùhledný
+    };
+
+    // Vytvoøení tøí transparentních králíkù
+    for (int i = 0; i < 3; i++) {
+        // Vytvoøení modelu králíka
+        Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", shader);
+
+        // Nastavení textury a barvy s prùhledností
+        bunny->meshes[0].texture_id = bunnyTexture;
+        bunny->meshes[0].diffuse_material = bunny_colors[i];
+
+        // Nastavení pozice a velikosti
+        bunny->origin = bunny_positions[i];
+        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // Zmenšíme králíky
+
+        // Oznaèení jako transparentní objekt
+        bunny->transparent = true;
+
+        // Pøidání do vektoru transparentních králíkù
+        transparent_bunnies.push_back(bunny);
     }
 }
 
@@ -288,7 +348,6 @@ void App::createMazeModel() {
     }
 }
 
-
 bool App::run() {
     if (!window) {
         std::cerr << "No active GLFW window!" << std::endl;
@@ -340,14 +399,57 @@ bool App::run() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Vykreslení bludištì
+        // Implementace Painter's algoritmu pro transparentní objekty
+        std::vector<Model*> transparent_objects;
+
+        // 1. NEJPRVE VYKRESLÍME VŠECHNY NEPRÙHLEDNÉ OBJEKTY
+        // Vykreslení bludištì (neprùhledné objekty)
         for (auto& wall : maze_walls) {
             // Nastavení model matice v shaderu
             shader.setUniform("uM_m", wall->getModelMatrix());
-
             // Vykreslení modelu
             wall->draw();
         }
+
+        // 2. PØIPRAVÍME SI SEZNAM TRANSPARENTNÍCH OBJEKTÙ
+        // Pøidání transparentních králíkù do seznamu
+        for (auto& bunny : transparent_bunnies) {
+            transparent_objects.push_back(bunny);
+        }
+
+        // 3. SEØADÍME TRANSPARENTNÍ OBJEKTY OD NEJVZDÁLENÌJŠÍHO K NEJBLIŽŠÍMU
+        std::sort(transparent_objects.begin(), transparent_objects.end(),
+            [this](Model* a, Model* b) {
+                // Získání pozice objektù
+                glm::vec3 pos_a = a->origin;
+                glm::vec3 pos_b = b->origin;
+
+                // Výpoèet vzdálenosti od kamery
+                float dist_a = glm::distance(camera.Position, pos_a);
+                float dist_b = glm::distance(camera.Position, pos_b);
+
+                // Øazení od nejvzdálenìjšího k nejbližšímu (vìtší > menší)
+                return dist_a > dist_b;
+            });
+
+        // 4. NASTAVENÍ OPENGL PRO TRANSPARENTNÍ OBJEKTY
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE); // Zakázat zápis do depth bufferu
+
+        // 5. VYKRESLENÍ TRANSPARENTNÍCH OBJEKTÙ
+        for (auto* model : transparent_objects) {
+            // Nastavení model matice v shaderu
+            shader.setUniform("uM_m", model->getModelMatrix());
+            // Nastavení diffuse materiálu (vèetnì alpha)
+            shader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
+            // Vykreslení modelu
+            model->draw();
+        }
+
+        // 6. OBNOVENÍ PÙVODNÍHO STAVU OPENGL
+        glDepthMask(GL_TRUE);  // Povolit zápis do depth bufferu
+        glDisable(GL_BLEND);   // Vypnout blending
 
         // Výmìna bufferù a zpracování událostí
         glfwSwapBuffers(window);

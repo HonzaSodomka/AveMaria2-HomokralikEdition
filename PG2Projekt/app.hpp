@@ -31,6 +31,11 @@ private:
     cv::Mat maze_map;
     std::vector<Model*> maze_walls;
     std::vector<GLuint> wall_textures;
+
+    // PØIDÁNO PRO ÚKOL 1: Transparentní králíci
+    std::vector<Model*> transparent_bunnies;
+    void createTransparentBunnies();
+
     // Metody pro práci s bludištìm
     void genLabyrinth(cv::Mat& map);
     uchar getmap(cv::Mat& map, int x, int y);

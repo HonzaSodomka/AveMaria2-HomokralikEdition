@@ -20,6 +20,9 @@ public:
     glm::vec3 scale{ 1.0f, 1.0f, 1.0f };
     glm::mat4 local_model_matrix{ 1.0f }; // identita (žádná transformace)
 
+    // Pøíznak transparence - TOTO JE PØIDÁNO PRO ÚKOL 1
+    bool transparent{ false };
+
     ShaderProgram shader;
 
     Model(const std::filesystem::path& filename, ShaderProgram shader) {

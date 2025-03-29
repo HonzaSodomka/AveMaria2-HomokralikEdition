@@ -99,6 +99,12 @@ public:
             }
         }
 
+        // Nastavení diffuse_material do shaderu
+        GLint diffuse_color_loc = glGetUniformLocation(shader.getID(), "u_diffuse_color");
+        if (diffuse_color_loc >= 0) {
+            glUniform4fv(diffuse_color_loc, 1, glm::value_ptr(diffuse_material));
+        }
+
         // Vykreslení meshe
         glBindVertexArray(VAO);
         glDrawElements(primitive_type, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
