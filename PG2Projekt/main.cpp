@@ -1,12 +1,16 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 #include "app.hpp"
 
+// Globální instance aplikace
 App myApp;
 
 // Callback funkce pro klávesy
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    // Ukonèení aplikace klávesou Escape
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 
@@ -16,9 +20,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         myApp.change_color(key);
     }
 
-    // Pøidáno: Pøepínání VSync klávesou F10
+    // Pøepínání VSync klávesou F10
     if (key == GLFW_KEY_F10 && action == GLFW_PRESS) {
-        static bool vsync = false; // Zaèínáme s vypnutým VSync
+        static bool vsync = false;
         vsync = !vsync;
         glfwSwapInterval(vsync ? 1 : 0);
         std::cout << "VSync: " << (vsync ? "ON" : "OFF") << std::endl;
@@ -38,7 +42,7 @@ int main() {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
         // Vytvoøení okna
-        GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Triangle Demo", NULL, NULL);
+        GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Model Demo", NULL, NULL);
         if (!window) {
             glfwTerminate();
             throw std::runtime_error("Failed to create GLFW window");

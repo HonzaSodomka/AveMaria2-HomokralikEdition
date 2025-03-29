@@ -1,13 +1,18 @@
 #include <iostream>
+#include <string>
+#include <cmath>
+
+// OpenGL includes
 #include <GL/glew.h>
 #include <GL/wglew.h>
 #include <GLFW/glfw3.h>
+
+// GLM includes
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <cmath>
-#include "app.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "app.hpp"
 
 App::App() {}
 
@@ -58,9 +63,6 @@ void App::init_assets() {
         std::cerr << "Model loading error: " << e.what() << std::endl;
         throw;
     }
-
-    // Povolení depth testingu
-    glEnable(GL_DEPTH_TEST);
 }
 
 bool App::run() {
@@ -82,8 +84,7 @@ bool App::run() {
         double currentTime = glfwGetTime();
         frameCount++;
         if (currentTime - lastTime >= 1.0) {
-            std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount) +
-                " | Color: R=" + std::to_string(r) + " G=" + std::to_string(g) + " B=" + std::to_string(b);
+            std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount);
             glfwSetWindowTitle(window, fpsTitle.c_str());
             frameCount = 0;
             lastTime = currentTime;
@@ -92,9 +93,7 @@ bool App::run() {
         // Vyèištìní obrazovky
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Nastavení barvy
-        //shader.setUniform("uniform_Color", glm::vec4(r, g, b, a));
-
+        // Pøedání èasu do shaderu pro animaci
         shader.setUniform("time", static_cast<float>(glfwGetTime()));
 
         // Vykreslení modelu
