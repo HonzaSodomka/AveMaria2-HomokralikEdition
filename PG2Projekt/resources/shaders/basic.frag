@@ -3,7 +3,7 @@ in vec3 vertexPosition;
 out vec4 FragColor;
 
 void main() {
-    // Vytvoøení duhového efektu na základì pozice
+    // DuhovÃ½ efekt na zÃ¡kladÄ› pozice
     vec3 rainbow = vec3(
         0.5 + 0.5 * sin(vertexPosition.x * 10.0),
         0.5 + 0.5 * sin(vertexPosition.y * 10.0 + 2.0),

@@ -1,11 +1,9 @@
 #pragma once
-
 #include <string>
 #include <vector>
-
+#include <iostream>
 #include <glm/glm.hpp> 
 #include <glm/ext.hpp>
-
 #include "assets.hpp"
 #include "ShaderProgram.hpp"
 
@@ -14,10 +12,8 @@ public:
     // mesh data
     std::vector<vertex> vertices;
     std::vector<GLuint> indices;
-
     glm::vec3 origin{};
     glm::vec3 orientation{};
-
     GLuint texture_id{ 0 }; // texture id=0  means no texture
     GLenum primitive_type = GL_POINT;
     ShaderProgram shader;
@@ -29,7 +25,9 @@ public:
     float reflectivity{ 1.0f };
 
     // indirect (indexed) draw 
-    Mesh(GLenum primitive_type, ShaderProgram shader, std::vector<vertex> const& vertices, std::vector<GLuint> const& indices, glm::vec3 const& origin, glm::vec3 const& orientation, GLuint const texture_id = 0) :
+    Mesh(GLenum primitive_type, ShaderProgram shader, std::vector<vertex> const& vertices,
+        std::vector<GLuint> const& indices, glm::vec3 const& origin,
+        glm::vec3 const& orientation, GLuint const texture_id = 0) :
         primitive_type(primitive_type),
         shader(shader),
         vertices(vertices),
@@ -53,7 +51,8 @@ public:
         GLint position_attrib_location = glGetAttribLocation(shader.getID(), "attribute_Position");
         if (position_attrib_location >= 0) {
             glEnableVertexArrayAttrib(VAO, position_attrib_location);
-            glVertexArrayAttribFormat(VAO, position_attrib_location, 3, GL_FLOAT, GL_FALSE, offsetof(vertex, position));
+            glVertexArrayAttribFormat(VAO, position_attrib_location, 3, GL_FLOAT, GL_FALSE,
+                offsetof(vertex, position));
             glVertexArrayAttribBinding(VAO, position_attrib_location, 0);
         }
 
@@ -62,21 +61,18 @@ public:
         glVertexArrayElementBuffer(VAO, EBO);
     }
 
-
-    void draw(glm::vec3 const& offset, glm::vec3 const& rotation) const {
+    // Metoda draw s výchozími hodnotami pro argumenty
+    void draw(glm::vec3 const& offset = glm::vec3(0.0f), glm::vec3 const& rotation = glm::vec3(0.0f)) const {
         if (VAO == 0) {
             std::cerr << "VAO not initialized!\n";
             return;
         }
-
-        shader.activate();
 
         // Vykreslení meshe
         glBindVertexArray(VAO);
         glDrawElements(primitive_type, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0); // Unbind VAO
     }
-
 
     void clear(void) {
         texture_id = 0;

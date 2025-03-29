@@ -14,12 +14,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 
-    // Zmáèknutí kláves R, G, B pro zmìnu barvy
-    if ((key == GLFW_KEY_R || key == GLFW_KEY_G || key == GLFW_KEY_B) &&
-        (action == GLFW_PRESS || action == GLFW_REPEAT)) {
-        myApp.change_color(key);
-    }
-
     // Pøepínání VSync klávesou F10
     if (key == GLFW_KEY_F10 && action == GLFW_PRESS) {
         static bool vsync = false;

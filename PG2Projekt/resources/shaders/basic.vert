@@ -1,27 +1,16 @@
 #version 460 core
 in vec3 attribute_Position;
 out vec3 vertexPosition;
-uniform float time; // »as pro animaci
+uniform mat4 uP_m = mat4(1.0);  // Projekƒçn√≠ matice
+uniform mat4 uV_m = mat4(1.0);  // View matice (kamera)
+uniform mat4 uM_m = mat4(1.0);  // Model matice (pozice, rotace, mƒõ≈ô√≠tko objektu)
 
 void main() {
-    // ZmenöenÌ a posunutÌ
-    vec3 transformed = attribute_Position * 0.18; // ZvÏtöenÌ na 15%
-    transformed.y += 0.0;  // é·dnÈ posunutÌ dol˘
-    transformed.x += 0.0;  // é·dnÈ posunutÌ do stran
+    // Transformace vrcholu pomoc√≠ matic
+    vec4 worldPosition = uM_m * vec4(attribute_Position, 1.0);
+    vec4 viewPosition = uV_m * worldPosition;
+    gl_Position = uP_m * viewPosition;
     
-    // Rotace kolem osy Y
-    float angle = time * 0.5;
-    float cosAngle = cos(angle);
-    float sinAngle = sin(angle);
-    
-    // Aplikace rotace
-    float x = transformed.x * cosAngle - transformed.z * sinAngle;
-    float z = transformed.x * sinAngle + transformed.z * cosAngle;
-    transformed.x = x;
-    transformed.z = z;
-    
-    // P¯ed·nÌ pozice do fragment shaderu
-    vertexPosition = transformed;
-    
-    gl_Position = vec4(transformed, 1.0);
+    // P≈ôed√°n√≠ pozice do fragment shaderu
+    vertexPosition = worldPosition.xyz;
 }

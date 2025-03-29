@@ -1,10 +1,9 @@
 #pragma once
-
 #include <filesystem>
 #include <string>
 #include <vector> 
 #include <glm/glm.hpp> 
-
+#include <glm/gtc/matrix_transform.hpp>
 #include "assets.hpp"
 #include "Mesh.hpp"
 #include "ShaderProgram.hpp"
@@ -14,8 +13,13 @@ class Model {
 public:
     std::vector<Mesh> meshes;
     std::string name;
-    glm::vec3 origin{};
-    glm::vec3 orientation{};
+
+    // Transformaèní vlastnosti
+    glm::vec3 origin{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 orientation{ 0.0f, 0.0f, 0.0f };  // v radiánech
+    glm::vec3 scale{ 1.0f, 1.0f, 1.0f };
+    glm::mat4 local_model_matrix{ 1.0f }; // identita (žádná transformace)
+
     ShaderProgram shader;
 
     Model(const std::filesystem::path& filename, ShaderProgram shader) {
@@ -26,7 +30,6 @@ public:
         std::vector<glm::vec3> vertices;
         std::vector<glm::vec2> uvs;
         std::vector<glm::vec3> normals;
-
         bool res = loadOBJ(filename.string(), vertices, uvs, normals);
         if (!res) {
             throw std::runtime_error("Failed to load OBJ file: " + filename.string());
@@ -65,13 +68,53 @@ public:
 
     // update position etc. based on running time
     void update(const float delta_t) {
-        // origin += glm::vec3(3,0,0) * delta_t; // s = s0 + v*dt
+        // Zde mùžete implementovat automatické animace
+        // Napø.: orientation.y += 1.0f * delta_t; // otáèení kolem Y osy
     }
 
-    void draw(glm::vec3 const& offset = glm::vec3(0.0), glm::vec3 const& rotation = glm::vec3(0.0f)) {
-        // call draw() on mesh (all meshes)
-        for (auto const& mesh : meshes) {
-            mesh.draw(origin + offset, orientation + rotation);
+    // Metoda pro získání model matice
+    glm::mat4 getModelMatrix() const {
+        // Výpoèet kompletní transformaèní matice
+        glm::mat4 t = glm::translate(glm::mat4(1.0f), origin);
+        glm::mat4 rx = glm::rotate(glm::mat4(1.0f), orientation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 ry = glm::rotate(glm::mat4(1.0f), orientation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 rz = glm::rotate(glm::mat4(1.0f), orientation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
+
+        return local_model_matrix * s * rz * ry * rx * t;
+    }
+
+    void draw(glm::vec3 const& offset = glm::vec3(0.0f),
+        glm::vec3 const& rotation = glm::vec3(0.0f),
+        glm::vec3 const& scale_change = glm::vec3(1.0f)) {
+
+        // Výpoèet kompletní transformaèní matice
+        glm::mat4 t = glm::translate(glm::mat4(1.0f), origin);
+        glm::mat4 rx = glm::rotate(glm::mat4(1.0f), orientation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 ry = glm::rotate(glm::mat4(1.0f), orientation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 rz = glm::rotate(glm::mat4(1.0f), orientation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
+
+        // Dodateèné transformace
+        glm::mat4 m_off = glm::translate(glm::mat4(1.0f), offset);
+        glm::mat4 m_rx = glm::rotate(glm::mat4(1.0f), rotation.x, glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::mat4 m_ry = glm::rotate(glm::mat4(1.0f), rotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 m_rz = glm::rotate(glm::mat4(1.0f), rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 m_s = glm::scale(glm::mat4(1.0f), scale_change);
+
+        // Kombinace všech transformací
+        glm::mat4 model_matrix = local_model_matrix * s * rz * ry * rx * t * m_s * m_rz * m_ry * m_rx * m_off;
+
+        // Vykreslení všech meshù
+        for (auto& mesh : meshes) {
+            mesh.draw();
+        }
+    }
+
+    // Pøetížený draw s pøímým zadáním model matice
+    void draw(glm::mat4 const& model_matrix) {
+        for (auto& mesh : meshes) {
+            mesh.draw();
         }
     }
 };
