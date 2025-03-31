@@ -50,5 +50,11 @@
     <ClInclude Include="Camera.hpp">
       <Filter>Hlavičkové soubory</Filter>
     </ClInclude>
+    <ClInclude Include="Light.hpp">
+      <Filter>Hlavičkové soubory</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.hpp">
+      <Filter>Hlavičkové soubory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

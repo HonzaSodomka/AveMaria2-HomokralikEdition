@@ -32,6 +32,9 @@ private:
     std::vector<Model*> maze_walls;
     std::vector<GLuint> wall_textures;
 
+    GLuint lampVAO;
+    glm::vec3 pointLightPosition;
+
     // PØIDÁNO PRO ÚKOL 1: Transparentní králíci
     std::vector<Model*> transparent_bunnies;
     void createTransparentBunnies();

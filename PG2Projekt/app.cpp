@@ -1,4 +1,4 @@
-#include <iostream>
+Ôªø#include <iostream>
 #include <string>
 #include <cmath>
 #include <random>
@@ -19,35 +19,38 @@ App::App() :
     firstMouse(true),
     fov(DEFAULT_FOV)
 {
-    // NastavenÌ poË·teËnÌ pozice kamery
+    // Pozice svƒõtla uprost≈ôed mapy (15x15 / 2)
+    pointLightPosition = glm::vec3(7.5f, 2.0f, 7.5f);
+    // Nastaven√≠ po√®√°te√®n√≠ pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
 }
 
 App::~App() {
-    // ⁄klid
+    // √öklid
     shader.clear();
     if (triangle) {
         delete triangle;
         triangle = nullptr;
     }
 
-    // UvolnÏnÌ model˘ bludiötÏ
+    // Uvoln√¨n√≠ model√π bludi≈°t√¨
     for (auto& wall : maze_walls) {
         delete wall;
     }
     maze_walls.clear();
 
-    // UvolnÏnÌ transparentnÌch kr·lÌk˘
+    // Uvoln√¨n√≠ transparentn√≠ch kr√°l√≠k√π
     for (auto& bunny : transparent_bunnies) {
         delete bunny;
     }
     transparent_bunnies.clear();
+    glDeleteVertexArrays(1, &lampVAO);
 }
 
 bool App::init(GLFWwindow* win) {
     window = win;
 
-    // UjistÌme se, ûe FOV m· spr·vnou hodnotu
+    // Ujist√≠me se, ≈æe FOV m√° spr√°vnou hodnotu
     fov = DEFAULT_FOV;
 
     if (!GLEW_ARB_direct_state_access) {
@@ -55,47 +58,109 @@ bool App::init(GLFWwindow* win) {
         return false;
     }
 
-    // NastavenÌ ukazatele na t¯Ìdu App pro callbacky
+    // Nastaven√≠ ukazatele na t√∏√≠du App pro callbacky
     glfwSetWindowUserPointer(window, this);
 
-    // NastavenÌ callback˘
+    // Nastaven√≠ callback√π
     glfwSetFramebufferSizeCallback(window, fbsize_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-    // Zak·z·nÌ zobrazenÌ kurzoru a jeho omezenÌ na okno
+    // Zak√°z√°n√≠ zobrazen√≠ kurzoru a jeho omezen√≠ na okno
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // PovolenÌ Z-bufferu pro spr·vnÈ vykreslov·nÌ 3D model˘
+    // Povolen√≠ Z-bufferu pro spr√°vn√© vykreslov√°n√≠ 3D model√π
     glEnable(GL_DEPTH_TEST);
 
-    // NastavenÌ pro pr˘hlednost
+    // Nastaven√≠ pro pr√πhlednost
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // ZÌsk·nÌ velikosti framebufferu
+    // Z√≠sk√°n√≠ velikosti framebufferu
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
-    // NaËtenÌ assets
+    // Na√®ten√≠ assets
     init_assets();
 
-    // PrvnÌ aktualizace projekËnÌ matice
+    // Prvn√≠ aktualizace projek√®n√≠ matice
     update_projection_matrix();
 
-    // ExplicitnÌ nastavenÌ view matice
+    // Explicitn√≠ nastaven√≠ view matice
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uV_m", camera.GetViewMatrix());
     }
 
+    // Inicializace svƒõtla (mal√° kostka)
+    float lampVertices[] = {
+        // pozice (mal√° kostka)
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f
+    };
+
+    // Vytvo≈ôen√≠ VAO a VBO pro lampu
+    GLuint lampVBO;
+    glGenVertexArrays(1, &lampVAO);
+    glGenBuffers(1, &lampVBO);
+
+    glBindVertexArray(lampVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(lampVertices), lampVertices, GL_STATIC_DRAW);
+
+    // Nastaven√≠ atribut≈Ø
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     return true;
 }
 
 void App::init_assets() {
-    // NaËtenÌ shader˘
+    // Na√®ten√≠ shader√π
     try {
         std::cout << "Loading shaders..." << std::endl;
         shader = ShaderProgram("resources/shaders/tex.vert", "resources/shaders/tex.frag");
@@ -106,7 +171,7 @@ void App::init_assets() {
         throw;
     }
 
-    // Vytvo¯enÌ bludiötÏ
+    // Vytvo√∏en√≠ bludi≈°t√¨
     try {
         std::cout << "Creating maze..." << std::endl;
         createMazeModel();
@@ -117,7 +182,7 @@ void App::init_assets() {
         throw;
     }
 
-    // Vytvo¯enÌ transparentnÌch kr·lÌk˘
+    // Vytvo√∏en√≠ transparentn√≠ch kr√°l√≠k√π
     try {
         std::cout << "Creating transparent bunnies..." << std::endl;
         createTransparentBunnies();
@@ -130,51 +195,51 @@ void App::init_assets() {
 }
 
 void App::createTransparentBunnies() {
-    // NaËtenÌ textury pro kr·lÌky
+    // Na√®ten√≠ textury pro kr√°l√≠ky
     GLuint bunnyTexture = textureInit("resources/textures/kralik.jpg");
 
-    // Pozice pro kr·lÌky v bludiöti
+    // Pozice pro kr√°l√≠ky v bludi≈°ti
     std::vector<glm::vec3> bunny_positions = {
-        glm::vec3(0.0f, 5.0f, 3.0f),   // PrvnÌ kr·lÌk
-        glm::vec3(20.0f, 5.0f, 7.0f),   // Druh˝ kr·lÌk
-        glm::vec3(40.0f, 5.0f, 5.0f)   // T¯etÌ kr·lÌk
+        glm::vec3(0.0f, 5.0f, 3.0f),   // Prvn√≠ kr√°l√≠k
+        glm::vec3(20.0f, 5.0f, 7.0f),   // Druh√Ω kr√°l√≠k
+        glm::vec3(40.0f, 5.0f, 5.0f)   // T√∏et√≠ kr√°l√≠k
     };
 
-    // Barvy pro kr·lÌky (RGBA, kde A je pr˘hlednost) - NIéäÕ HODNOTY ALPHA
+    // Barvy pro kr√°l√≠ky (RGBA, kde A je pr√πhlednost) - NI≈Ω≈†√ç HODNOTY ALPHA
     std::vector<glm::vec4> bunny_colors = {
-        glm::vec4(1.0f, 0.3f, 0.3f, 0.8f),   // »erven˝ vÌce pr˘hledn˝ 
-        glm::vec4(0.3f, 1.0f, 0.3f, 0.6f),   // Zelen˝ jeötÏ vÌce pr˘hledn˝
-        glm::vec4(0.3f, 0.3f, 1.0f, 0.4f)    // Modr˝ nejvÌce pr˘hledn˝
+        glm::vec4(1.0f, 0.3f, 0.3f, 0.8f),   // √àerven√Ω v√≠ce pr√πhledn√Ω 
+        glm::vec4(0.3f, 1.0f, 0.3f, 0.6f),   // Zelen√Ω je≈°t√¨ v√≠ce pr√πhledn√Ω
+        glm::vec4(0.3f, 0.3f, 1.0f, 0.4f)    // Modr√Ω nejv√≠ce pr√πhledn√Ω
     };
 
-    // Vytvo¯enÌ t¯Ì transparentnÌch kr·lÌk˘
+    // Vytvo√∏en√≠ t√∏√≠ transparentn√≠ch kr√°l√≠k√π
     for (int i = 0; i < 3; i++) {
-        // Vytvo¯enÌ modelu kr·lÌka
+        // Vytvo√∏en√≠ modelu kr√°l√≠ka
         Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", shader);
 
-        // NastavenÌ textury a barvy s pr˘hlednostÌ
+        // Nastaven√≠ textury a barvy s pr√πhlednost√≠
         bunny->meshes[0].texture_id = bunnyTexture;
         bunny->meshes[0].diffuse_material = bunny_colors[i];
 
-        // NastavenÌ pozice a velikosti
+        // Nastaven√≠ pozice a velikosti
         bunny->origin = bunny_positions[i];
-        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // ZmenöÌme kr·lÌky
+        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // Zmen≈°√≠me kr√°l√≠ky
 
-        // OznaËenÌ jako transparentnÌ objekt
+        // Ozna√®en√≠ jako transparentn√≠ objekt
         bunny->transparent = true;
 
-        // P¯id·nÌ do vektoru transparentnÌch kr·lÌk˘
+        // P√∏id√°n√≠ do vektoru transparentn√≠ch kr√°l√≠k√π
         transparent_bunnies.push_back(bunny);
     }
 }
 
 GLuint App::textureInit(const std::filesystem::path& filepath) {
-    std::cout << "NaËÌt·m texturu: " << filepath << std::endl;  // Debug v˝pis
-    // Pouûij std::filesystem::path spr·vnÏ
+    std::cout << "Na√®√≠t√°m texturu: " << filepath << std::endl;  // Debug v√Ωpis
+    // Pou≈æij std::filesystem::path spr√°vn√¨
     std::string pathString = filepath.string();
     cv::Mat image = cv::imread(pathString, cv::IMREAD_UNCHANGED);
     if (image.empty()) {
-        throw std::runtime_error("Nelze naËÌst texturu ze souboru: " + pathString);
+        throw std::runtime_error("Nelze na√®√≠st texturu ze souboru: " + pathString);
     }
     return gen_tex(image);
 }
@@ -182,15 +247,15 @@ GLuint App::textureInit(const std::filesystem::path& filepath) {
 GLuint App::gen_tex(cv::Mat& image) {
     GLuint ID = 0;
 
-    // Generov·nÌ ID OpenGL textury
+    // Generov√°n√≠ ID OpenGL textury
     glCreateTextures(GL_TEXTURE_2D, 1, &ID);
 
-    // NastavenÌ podle poËtu kan·l˘ v obr·zku
+    // Nastaven√≠ podle po√®tu kan√°l√π v obr√°zku
     switch (image.channels()) {
     case 3:
-        // Vytvo¯enÌ a inicializace datovÈho prostoru pro texturu - immutable form·t
+        // Vytvo√∏en√≠ a inicializace datov√©ho prostoru pro texturu - immutable form√°t
         glTextureStorage2D(ID, 1, GL_RGB8, image.cols, image.rows);
-        // Nahr·nÌ dat do textury
+        // Nahr√°n√≠ dat do textury
         glTextureSubImage2D(ID, 0, 0, 0, image.cols, image.rows, GL_BGR, GL_UNSIGNED_BYTE, image.data);
         break;
     case 4:
@@ -198,15 +263,15 @@ GLuint App::gen_tex(cv::Mat& image) {
         glTextureSubImage2D(ID, 0, 0, 0, image.cols, image.rows, GL_BGRA, GL_UNSIGNED_BYTE, image.data);
         break;
     default:
-        throw std::runtime_error("Nepodporovan˝ poËet kan·l˘ v textu¯e: " + std::to_string(image.channels()));
+        throw std::runtime_error("Nepodporovan√Ω po√®et kan√°l√π v textu√∏e: " + std::to_string(image.channels()));
     }
 
-    // NastavenÌ filtrov·nÌ textury
-    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // biline·rnÌ zvÏtöov·nÌ
-    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // triline·rnÌ zmenöov·nÌ
-    glGenerateTextureMipmap(ID);  // Generov·nÌ mipmap
+    // Nastaven√≠ filtrov√°n√≠ textury
+    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // biline√°rn√≠ zv√¨t≈°ov√°n√≠
+    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // triline√°rn√≠ zmen≈°ov√°n√≠
+    glGenerateTextureMipmap(ID);  // Generov√°n√≠ mipmap
 
-    // NastavenÌ opakov·nÌ textury
+    // Nastaven√≠ opakov√°n√≠ textury
     glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(ID, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -286,21 +351,21 @@ void App::genLabyrinth(cv::Mat& map) {
     // set player position in 3D space (transform X-Y in map to XYZ in GL)
     camera.Position.x = (start_position.x) + 0.5f;
     camera.Position.z = (start_position.y) + 0.5f;
-    camera.Position.y = 0.5f; // V˝öka oËÌ
+    camera.Position.y = 0.5f; // V√Ω≈°ka o√®√≠
 }
 
 void App::createMazeModel() {
-    // NaËtenÌ atlasu textur
+    // Na√®ten√≠ atlasu textur
     cv::Mat atlas = cv::imread("resources/textures/tex_256.png", cv::IMREAD_UNCHANGED);
     if (atlas.empty()) {
-        throw std::runtime_error("Nelze naËÌst atlas textur!");
+        throw std::runtime_error("Nelze na√®√≠st atlas textur!");
     }
 
     // Atlas je 16x16 textur
-    const int texCount = 16; // PoËet textur v kaûdÈm smÏru
-    const int tileSize = atlas.cols / texCount; // Velikost jednÈ textury v pixelech
+    const int texCount = 16; // Po√®et textur v ka≈æd√©m sm√¨ru
+    const int tileSize = atlas.cols / texCount; // Velikost jedn√© textury v pixelech
 
-    // UloûenÌ textur
+    // Ulo≈æen√≠ textur
     auto saveTextureFromAtlas = [&](int row, int col, const std::string& filename) {
         int x = col * tileSize;
         int y = row * tileSize;
@@ -308,39 +373,39 @@ void App::createMazeModel() {
         cv::imwrite("resources/textures/" + filename, tileMat);
         };
 
-    // UloûenÌ textur
+    // Ulo≈æen√≠ textur
     saveTextureFromAtlas(1, 1, "floor.png"); // Podlaha
     saveTextureFromAtlas(3, 2, "wall.png");  // Zdi
 
-    // NaËtenÌ textur
+    // Na√®ten√≠ textur
     wall_textures.clear();
     GLuint floorTexture = textureInit("resources/textures/floor.png");
     GLuint wallTexture = textureInit("resources/textures/wall.png");
     wall_textures.push_back(floorTexture);
     wall_textures.push_back(wallTexture);
 
-    // Vytvo¯enÌ bludiötÏ
+    // Vytvo√∏en√≠ bludi≈°t√¨
     maze_map = cv::Mat(15, 15, CV_8U);
     genLabyrinth(maze_map);
 
-    // **Vytvo¯enÌ podlahy (15x15)**
+    // **Vytvo√∏en√≠ podlahy (15x15)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
             Model* floor = new Model("resources/models/cube.obj", shader);
             floor->meshes[0].texture_id = floorTexture;
-            floor->origin = glm::vec3(i, 0.0f, j); // SpodnÌ vrstva
+            floor->origin = glm::vec3(i, 0.0f, j); // Spodn√≠ vrstva
             floor->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             maze_walls.push_back(floor);
         }
     }
 
-    // **Vytvo¯enÌ zdÌ (z `maze_map`)**
+    // **Vytvo√∏en√≠ zd√≠ (z `maze_map`)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            if (getmap(maze_map, i, j) == '#') { // Pokud je tam zeÔ
+            if (getmap(maze_map, i, j) == '#') { // Pokud je tam ze√Ø
                 Model* wall = new Model("resources/models/cube.obj", shader);
                 wall->meshes[0].texture_id = wallTexture;
-                wall->origin = glm::vec3(i, 1.0f, j); // UmÌstÏnÌ nad podlahu
+                wall->origin = glm::vec3(i, 1.0f, j); // Um√≠st√¨n√≠ nad podlahu
                 wall->scale = glm::vec3(1.0f, 1.0f, 1.0f);
                 maze_walls.push_back(wall);
             }
@@ -354,7 +419,7 @@ bool App::run() {
         return false;
     }
 
-    // UjistÌme se, ûe FOV m· spr·vnou hodnotu
+    // Ujist√≠me se, ≈æe FOV m√° spr√°vnou hodnotu
     if (fov <= 0.0f) {
         fov = DEFAULT_FOV;
     }
@@ -362,24 +427,28 @@ bool App::run() {
     // Aktivace shader programu
     shader.activate();
 
-    // Inicializace projekËnÌ a pohledovÈ matice
+    // Inicializace projek√®n√≠ a pohledov√© matice
     update_projection_matrix();
     shader.setUniform("uV_m", camera.GetViewMatrix());
 
-    // PromÏnnÈ pro mÏ¯enÌ FPS a deltaTime
+    shader.setUniform("lightPos", pointLightPosition);
+    shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.8f));
+    shader.setUniform("viewPos", camera.Position);
+
+    // Prom√¨nn√© pro m√¨√∏en√≠ FPS a deltaTime
     double lastTime = glfwGetTime();
     double lastFrameTime = lastTime;
     int frameCount = 0;
     std::string title = "OpenGL Maze Demo";
 
-    // HlavnÌ smyËka
+    // Hlavn√≠ smy√®ka
     while (!glfwWindowShouldClose(window)) {
-        // V˝poËet deltaTime
+        // V√Ωpo√®et deltaTime
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - lastFrameTime);
         lastFrameTime = currentTime;
 
-        // MÏ¯enÌ FPS
+        // M√¨√∏en√≠ FPS
         frameCount++;
         if (currentTime - lastTime >= 1.0) {
             std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount);
@@ -388,70 +457,86 @@ bool App::run() {
             lastTime = currentTime;
         }
 
-        // Zpracov·nÌ vstupu z kl·vesnice pro pohyb kamery
+        // Zpracov√°n√≠ vstupu z kl√°vesnice pro pohyb kamery
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
         camera.Move(direction);
 
-        // Aktualizace pohledovÈ matice
+        // Aktualizace pohledov√© matice
         shader.setUniform("uV_m", camera.GetViewMatrix());
 
-        // VyËiötÏnÌ obrazovky
+        // Vy√®i≈°t√¨n√≠ obrazovky
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Implementace Painter's algoritmu pro transparentnÌ objekty
+        // Implementace Painter's algoritmu pro transparentn√≠ objekty
         std::vector<Model*> transparent_objects;
 
-        // 1. NEJPRVE VYKRESLÕME VäECHNY NEPRŸHLEDN… OBJEKTY
-        // VykreslenÌ bludiötÏ (nepr˘hlednÈ objekty)
+        // 1. NEJPRVE VYKRESL√çME V≈†ECHNY NEPR√ôHLEDN√â OBJEKTY
+        // Vykreslen√≠ bludi≈°t√¨ (nepr√πhledn√© objekty)
         for (auto& wall : maze_walls) {
-            // NastavenÌ model matice v shaderu
+            // Nastaven√≠ model matice v shaderu
             shader.setUniform("uM_m", wall->getModelMatrix());
-            // VykreslenÌ modelu
+            // Vykreslen√≠ modelu
             wall->draw();
         }
 
-        // 2. PÿIPRAVÕME SI SEZNAM TRANSPARENTNÕCH OBJEKTŸ
-        // P¯id·nÌ transparentnÌch kr·lÌk˘ do seznamu
+        // 2. P√òIPRAV√çME SI SEZNAM TRANSPARENTN√çCH OBJEKT√ô
+        // P√∏id√°n√≠ transparentn√≠ch kr√°l√≠k√π do seznamu
         for (auto& bunny : transparent_bunnies) {
             transparent_objects.push_back(bunny);
         }
 
-        // 3. SEÿADÕME TRANSPARENTNÕ OBJEKTY OD NEJVZD¡LENÃJäÕHO K NEJBLIéäÕMU
+        // 3. SE√òAD√çME TRANSPARENTN√ç OBJEKTY OD NEJVZD√ÅLEN√åJ≈†√çHO K NEJBLI≈Ω≈†√çMU
         std::sort(transparent_objects.begin(), transparent_objects.end(),
             [this](Model* a, Model* b) {
-                // ZÌsk·nÌ pozice objekt˘
+                // Z√≠sk√°n√≠ pozice objekt√π
                 glm::vec3 pos_a = a->origin;
                 glm::vec3 pos_b = b->origin;
 
-                // V˝poËet vzd·lenosti od kamery
+                // V√Ωpo√®et vzd√°lenosti od kamery
                 float dist_a = glm::distance(camera.Position, pos_a);
                 float dist_b = glm::distance(camera.Position, pos_b);
 
-                // ÿazenÌ od nejvzd·lenÏjöÌho k nejbliûöÌmu (vÏtöÌ > menöÌ)
+                // √òazen√≠ od nejvzd√°len√¨j≈°√≠ho k nejbli≈æ≈°√≠mu (v√¨t≈°√≠ > men≈°√≠)
                 return dist_a > dist_b;
             });
 
-        // 4. NASTAVENÕ OPENGL PRO TRANSPARENTNÕ OBJEKTY
+        // 4. NASTAVEN√ç OPENGL PRO TRANSPARENTN√ç OBJEKTY
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE); // Zak·zat z·pis do depth bufferu
+        glDepthMask(GL_FALSE); // Zak√°zat z√°pis do depth bufferu
 
-        // 5. VYKRESLENÕ TRANSPARENTNÕCH OBJEKTŸ
+        // 5. VYKRESLEN√ç TRANSPARENTN√çCH OBJEKT√ô
         for (auto* model : transparent_objects) {
-            // NastavenÌ model matice v shaderu
+            // Nastaven√≠ model matice v shaderu
             shader.setUniform("uM_m", model->getModelMatrix());
-            // NastavenÌ diffuse materi·lu (vËetnÏ alpha)
+            // Nastaven√≠ diffuse materi√°lu (v√®etn√¨ alpha)
             shader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
-            // VykreslenÌ modelu
+            // Vykreslen√≠ modelu
             model->draw();
         }
 
-        // 6. OBNOVENÕ PŸVODNÕHO STAVU OPENGL
-        glDepthMask(GL_TRUE);  // Povolit z·pis do depth bufferu
+        // 6. OBNOVEN√ç P√ôVODN√çHO STAVU OPENGL
+        glDepthMask(GL_TRUE);  // Povolit z√°pis do depth bufferu
         glDisable(GL_BLEND);   // Vypnout blending
 
-        // V˝mÏna buffer˘ a zpracov·nÌ ud·lostÌ
+        // Vykreslen√≠ lampy jako zdroje svƒõtla
+        shader.activate();
+
+        // Nastaven√≠ modelu pro lampu
+        glm::mat4 lampModel = glm::mat4(1.0f);
+        lampModel = glm::translate(lampModel, pointLightPosition);
+        shader.setUniform("uM_m", lampModel);
+
+        // Nastaven√≠ barvy lampy (jasnƒõ ≈ælut√°)
+        shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.7f, 1.0f));
+
+        // Vykreslen√≠ lampy
+        glBindVertexArray(lampVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+
+        // V√Ωm√¨na buffer√π a zpracov√°n√≠ ud√°lost√≠
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -461,9 +546,9 @@ bool App::run() {
 
 void App::update_projection_matrix() {
     if (height < 1)
-        height = 1;   // Prevence dÏlenÌ nulou
+        height = 1;   // Prevence d√¨len√≠ nulou
 
-    // Kontrola, zda fov m· platnou hodnotu
+    // Kontrola, zda fov m√° platnou hodnotu
     if (fov <= 0.0f) {
         fov = DEFAULT_FOV;
     }
@@ -471,13 +556,13 @@ void App::update_projection_matrix() {
     float ratio = static_cast<float>(width) / height;
 
     projection_matrix = glm::perspective(
-        glm::radians(fov),   // Vertik·lnÌ zornÈ pole ve stupnÌch, p¯evedeno na radi·ny
-        ratio,               // PomÏr stran okna
+        glm::radians(fov),   // Vertik√°ln√≠ zorn√© pole ve stupn√≠ch, p√∏evedeno na radi√°ny
+        ratio,               // Pom√¨r stran okna
         0.1f,                // Near clipping plane
         20000.0f             // Far clipping plane
     );
 
-    // NastavenÌ uniform v shaderu
+    // Nastaven√≠ uniform v shaderu
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uP_m", projection_matrix);
@@ -489,17 +574,17 @@ void App::fbsize_callback(GLFWwindow* window, int width, int height) {
     app->width = width;
     app->height = height;
 
-    // NastavenÌ viewportu
+    // Nastaven√≠ viewportu
     glViewport(0, 0, width, height);
 
-    // Aktualizace projekËnÌ matice
+    // Aktualizace projek√®n√≠ matice
     app->update_projection_matrix();
 }
 
 void App::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
     app->fov += -5.0f * static_cast<float>(yoffset);  // Zoom in/out
-    app->fov = glm::clamp(app->fov, 20.0f, 170.0f);  // OmezenÌ FOV na rozumnÈ hodnoty
+    app->fov = glm::clamp(app->fov, 20.0f, 170.0f);  // Omezen√≠ FOV na rozumn√© hodnoty
     app->update_projection_matrix();
 }
 
@@ -510,6 +595,24 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
         switch (key) {
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, GLFW_TRUE);
+            break;
+        case GLFW_KEY_UP:
+            app->pointLightPosition.y += 0.1f;
+            break;
+        case GLFW_KEY_DOWN:
+            app->pointLightPosition.y -= 0.1f;
+            break;
+        case GLFW_KEY_LEFT:
+            app->pointLightPosition.x -= 0.1f;
+            break;
+        case GLFW_KEY_RIGHT:
+            app->pointLightPosition.x += 0.1f;
+            break;
+        case GLFW_KEY_PAGE_UP:
+            app->pointLightPosition.z -= 0.1f;
+            break;
+        case GLFW_KEY_PAGE_DOWN:
+            app->pointLightPosition.z += 0.1f;
             break;
         }
     }
@@ -525,7 +628,7 @@ void App::cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }
 
     double xoffset = xpos - app->lastX;
-    double yoffset = app->lastY - ypos; // P¯evr·ceno, protoûe y-sou¯adnice jdou od shora dol˘
+    double yoffset = app->lastY - ypos;
 
     app->lastX = xpos;
     app->lastY = ypos;
@@ -537,9 +640,10 @@ void App::mouse_button_callback(GLFWwindow* window, int button, int action, int 
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
 
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
-        // Reset FOV na v˝chozÌ hodnotu
+        // Reset FOV na v√Ωchoz√≠ hodnotu
         app->fov = app->DEFAULT_FOV;
         app->update_projection_matrix();
         std::cout << "Zoom reset to default" << std::endl;
     }
 }
+
