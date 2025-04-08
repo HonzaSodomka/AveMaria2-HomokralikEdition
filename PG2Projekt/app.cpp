@@ -33,6 +33,12 @@ App::~App() {
         triangle = nullptr;
     }
 
+    // Uvolnění modelu slunce
+    if (sunModel) {
+        delete sunModel;
+        sunModel = nullptr;
+    }
+
     // Uvolnìní modelù bludištì
     for (auto& wall : maze_walls) {
         delete wall;
@@ -179,6 +185,17 @@ void App::init_assets() {
     }
     catch (const std::exception& e) {
         std::cerr << "Maze creation error: " << e.what() << std::endl;
+        throw;
+    }
+
+    // Nastavení pozice slunce/světla
+    try {
+        std::cout << "Setting up sun light..." << std::endl;
+        createSunModel();
+        std::cout << "Sun light set up successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Sun light setup error: " << e.what() << std::endl;
         throw;
     }
 
@@ -427,13 +444,20 @@ bool App::run() {
     // Aktivace shader programu
     shader.activate();
 
+    // Vypíšeme pozici světla pro debugging
+    std::cout << "Light position: " <<
+        pointLightPosition.x << ", " <<
+        pointLightPosition.y << ", " <<
+        pointLightPosition.z << std::endl;
+
+    // Nastavení světla
+    shader.setUniform("lightPos", pointLightPosition);
+    shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.0f)); // Žlutá barva
+    shader.setUniform("viewPos", camera.Position);
+
     // Inicializace projekèní a pohledové matice
     update_projection_matrix();
     shader.setUniform("uV_m", camera.GetViewMatrix());
-
-    shader.setUniform("lightPos", pointLightPosition);
-    shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.8f));
-    shader.setUniform("viewPos", camera.Position);
 
     // Promìnné pro mìøení FPS a deltaTime
     double lastTime = glfwGetTime();
@@ -447,6 +471,11 @@ bool App::run() {
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - lastFrameTime);
         lastFrameTime = currentTime;
+
+        shader.activate();
+        shader.setUniform("lightPos", pointLightPosition);
+        shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.0f));
+        shader.setUniform("viewPos", camera.Position);
 
         // Mìøení FPS
         frameCount++;
@@ -465,13 +494,14 @@ bool App::run() {
         shader.setUniform("uV_m", camera.GetViewMatrix());
 
         // Vyèištìní obrazovky
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.2f, 1.0f); // Tmavě modrá obloha
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Implementace Painter's algoritmu pro transparentní objekty
         std::vector<Model*> transparent_objects;
 
         // 1. NEJPRVE VYKRESLÍME VŠECHNY NEPRÙHLEDNÉ OBJEKTY
+
         // Vykreslení bludištì (neprùhledné objekty)
         for (auto& wall : maze_walls) {
             // Nastavení model matice v shaderu
@@ -480,7 +510,18 @@ bool App::run() {
             wall->draw();
         }
 
+        // Vykreslení slunce
+        if (sunModel) {
+            // Nastavení model matice pro slunce
+            shader.setUniform("uM_m", sunModel->getModelMatrix());
+            // Nastavení barvy slunce (jasná žlutá)
+            shader.setUniform("u_diffuse_color", sunModel->meshes[0].diffuse_material);
+            // Vykreslení modelu slunce
+            sunModel->draw();
+        }
+
         // 2. PØIPRAVÍME SI SEZNAM TRANSPARENTNÍCH OBJEKTÙ
+
         // Pøidání transparentních králíkù do seznamu
         for (auto& bunny : transparent_bunnies) {
             transparent_objects.push_back(bunny);
@@ -519,22 +560,6 @@ bool App::run() {
         // 6. OBNOVENÍ PÙVODNÍHO STAVU OPENGL
         glDepthMask(GL_TRUE);  // Povolit zápis do depth bufferu
         glDisable(GL_BLEND);   // Vypnout blending
-
-        // Vykreslení lampy jako zdroje světla
-        shader.activate();
-
-        // Nastavení modelu pro lampu
-        glm::mat4 lampModel = glm::mat4(1.0f);
-        lampModel = glm::translate(lampModel, pointLightPosition);
-        shader.setUniform("uM_m", lampModel);
-
-        // Nastavení barvy lampy (jasně žlutá)
-        shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.7f, 1.0f));
-
-        // Vykreslení lampy
-        glBindVertexArray(lampVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
 
         // Výmìna bufferù a zpracování událostí
         glfwSwapBuffers(window);
@@ -596,23 +621,85 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             break;
+
+            // Ovládání pozice světla pomocí šipek
         case GLFW_KEY_UP:
             app->pointLightPosition.y += 0.1f;
+
+            // Aktualizace pozice slunce (kostky)
+            for (auto& model : app->maze_walls) {
+                // Najdeme model slunce - žlutá kostka nad mapou
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
+
         case GLFW_KEY_DOWN:
             app->pointLightPosition.y -= 0.1f;
+
+            // Aktualizace pozice slunce
+            for (auto& model : app->maze_walls) {
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
+
         case GLFW_KEY_LEFT:
             app->pointLightPosition.x -= 0.1f;
+
+            // Aktualizace pozice slunce
+            for (auto& model : app->maze_walls) {
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
+
         case GLFW_KEY_RIGHT:
             app->pointLightPosition.x += 0.1f;
+
+            // Aktualizace pozice slunce
+            for (auto& model : app->maze_walls) {
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
+
         case GLFW_KEY_PAGE_UP:
             app->pointLightPosition.z -= 0.1f;
+
+            // Aktualizace pozice slunce
+            for (auto& model : app->maze_walls) {
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
+
         case GLFW_KEY_PAGE_DOWN:
             app->pointLightPosition.z += 0.1f;
+
+            // Aktualizace pozice slunce
+            for (auto& model : app->maze_walls) {
+                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
+                    model->origin.y > 5.0f) {
+                    model->origin = app->pointLightPosition;
+                    break;
+                }
+            }
             break;
         }
     }
@@ -645,5 +732,23 @@ void App::mouse_button_callback(GLFWwindow* window, int button, int action, int 
         app->update_projection_matrix();
         std::cout << "Zoom reset to default" << std::endl;
     }
+}
+
+void App::createSunModel() {
+    // Nastavení pozice světla nad středem mapy
+    pointLightPosition = glm::vec3(7.5f, 8.0f, 7.5f);
+
+    // Vytvoření viditelného objektu reprezentujícího slunce
+    Model* sun = new Model("resources/models/cube.obj", shader);
+
+    // Nastavení jasně žluté barvy pro slunce
+    sun->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // Čistě žlutá barva
+
+    // Nastavení pozice a měřítka - přesně nad středem mapy
+    sun->origin = pointLightPosition;
+    sun->scale = glm::vec3(0.5f); // Menší kostka jako slunce
+
+    // Přidání do seznamu modelů
+    maze_walls.push_back(sun);
 }
 

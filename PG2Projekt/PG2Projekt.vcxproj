@@ -145,6 +145,7 @@
     <ClInclude Include="app.hpp" />
     <ClInclude Include="assets.hpp" />
     <ClInclude Include="Camera.hpp" />
+    <ClInclude Include="DirectionalLight.hpp" />
     <ClInclude Include="Light.hpp" />
     <ClInclude Include="Material.hpp" />
     <ClInclude Include="Mesh.hpp" />

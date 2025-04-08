@@ -1,61 +1,72 @@
-#pragma once
+Ôªø#pragma once
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include <filesystem>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include "assets.hpp"
+#include <glm/glm.hpp>
 #include "ShaderProgram.hpp"
-#include "Model.hpp"
 #include "Camera.hpp"
+#include "Model.hpp"
 
 class App {
 public:
     App();
     ~App();
-    bool init(GLFWwindow* window);
-    void init_assets();
+
+    bool init(GLFWwindow* win);
     bool run();
-    // NaËtenÌ textury z obr·zku pomocÌ OpenCV
+
+private:
+    // Konstanty
+    const float DEFAULT_FOV = 70.0f;
+
+    // GLFW window
+    GLFWwindow* window = nullptr;
+    int width = 800, height = 600;
+
+    // Shader program
+    ShaderProgram shader;
+
+    // Model a kamera
+    Model* triangle = nullptr;
+    Camera camera;
+
+    // Svƒõtlo
+    glm::vec3 pointLightPosition;
+    GLuint lampVAO = 0;           // VAO pro svƒõtlo (zachov√°no pro kompatibilitu)
+    Model* sunModel = nullptr;    // Model slunce
+
+    // Mapa a objekty
+    cv::Mat maze_map;
+    std::vector<Model*> maze_walls;
+    std::vector<Model*> transparent_bunnies;
+    std::vector<GLuint> wall_textures;
+
+    // Projekƒçn√≠ matice
+    glm::mat4 projection_matrix = glm::mat4(1.0f);
+
+    // Promƒõnn√© pro pohyb kamery
+    float lastX, lastY;
+    bool firstMouse;
+    float fov;
+
+    // Inicializace a asset management
+    void init_assets();
+    void createMazeModel();
+    void createTransparentBunnies();
+    void createSunModel();
     GLuint textureInit(const std::filesystem::path& filepath);
-    // Callback metody
+    GLuint gen_tex(cv::Mat& image);
+    uchar getmap(cv::Mat& map, int x, int y);
+    void genLabyrinth(cv::Mat& map);
+    void update_projection_matrix();
+
+    // Callback funkce (statick√©, p≈ôed√°vaj√≠c√≠ vol√°n√≠ instanci t≈ô√≠dy)
     static void fbsize_callback(GLFWwindow* window, int width, int height);
     static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-private:
-    ShaderProgram shader;
-    Model* triangle{ nullptr };
-    // BludiötÏ
-    cv::Mat maze_map;
-    std::vector<Model*> maze_walls;
-    std::vector<GLuint> wall_textures;
-
-    GLuint lampVAO;
-    glm::vec3 pointLightPosition;
-
-    // PÿID¡NO PRO ⁄KOL 1: TransparentnÌ kr·lÌci
-    std::vector<Model*> transparent_bunnies;
-    void createTransparentBunnies();
-
-    // Metody pro pr·ci s bludiötÏm
-    void genLabyrinth(cv::Mat& map);
-    uchar getmap(cv::Mat& map, int x, int y);
-    void createMazeModel();
-
-    GLFWwindow* window{ nullptr };
-    // ProjekËnÌ matice a souvisejÌcÌ hodnoty
-    int width{ 800 }, height{ 600 };
-    float fov{ 60.0f };
-    const float DEFAULT_FOV = 60.0f;
-    glm::mat4 projection_matrix{ glm::identity<glm::mat4>() };
-    // Kamera
-    Camera camera{ glm::vec3(0.0f, 0.0f, 3.0f) };
-    double lastX{ 400.0 }, lastY{ 300.0 }; // PoslednÌ pozice kurzoru
-    bool firstMouse{ true };             // PromÏnn· pro inicializaci pozice kurzoru
-    // Metoda pro aktualizaci projekËnÌ matice
-    void update_projection_matrix();
-    // Pomocn· metoda pro generov·nÌ OpenGL textury z OpenCV obr·zku
-    GLuint gen_tex(cv::Mat& image);
 };
