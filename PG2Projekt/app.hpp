@@ -35,8 +35,8 @@ private:
 
     // Světlo
     glm::vec3 pointLightPosition;
-    GLuint lampVAO = 0;           // VAO pro světlo (zachováno pro kompatibilitu)
-    Model* sunModel = nullptr;    // Model slunce
+    GLuint lampVAO = 0;
+    Model* sunModel = nullptr;
 
     // Mapa a objekty
     cv::Mat maze_map;

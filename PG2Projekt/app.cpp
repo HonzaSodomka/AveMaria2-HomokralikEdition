@@ -188,17 +188,6 @@ void App::init_assets() {
         throw;
     }
 
-    // Nastavení pozice slunce/světla
-    try {
-        std::cout << "Setting up sun light..." << std::endl;
-        createSunModel();
-        std::cout << "Sun light set up successfully" << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Sun light setup error: " << e.what() << std::endl;
-        throw;
-    }
-
     // Vytvoøení transparentních králíkù
     try {
         std::cout << "Creating transparent bunnies..." << std::endl;
@@ -207,6 +196,17 @@ void App::init_assets() {
     }
     catch (const std::exception& e) {
         std::cerr << "Transparent bunnies creation error: " << e.what() << std::endl;
+        throw;
+    }
+
+    // Nastavení pozice slunce/světla - jako poslední krok
+    try {
+        std::cout << "Setting up sun light..." << std::endl;
+        createSunModel();
+        std::cout << "Sun light set up successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Sun light setup error: " << e.what() << std::endl;
         throw;
     }
 }
@@ -240,7 +240,7 @@ void App::createTransparentBunnies() {
 
         // Nastavení pozice a velikosti
         bunny->origin = bunny_positions[i];
-        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // Zmenšíme králíky
+        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f);
 
         // Oznaèení jako transparentní objekt
         bunny->transparent = true;
@@ -251,8 +251,7 @@ void App::createTransparentBunnies() {
 }
 
 GLuint App::textureInit(const std::filesystem::path& filepath) {
-    std::cout << "Naèítám texturu: " << filepath << std::endl;  // Debug výpis
-    // Použij std::filesystem::path správnì
+    std::cout << "Naèítám texturu: " << filepath << std::endl;
     std::string pathString = filepath.string();
     cv::Mat image = cv::imread(pathString, cv::IMREAD_UNCHANGED);
     if (image.empty()) {
@@ -284,9 +283,9 @@ GLuint App::gen_tex(cv::Mat& image) {
     }
 
     // Nastavení filtrování textury
-    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // bilineární zvìtšování
-    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // trilineární zmenšování
-    glGenerateTextureMipmap(ID);  // Generování mipmap
+    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateTextureMipmap(ID);
 
     // Nastavení opakování textury
     glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -307,11 +306,11 @@ void App::genLabyrinth(cv::Mat& map) {
     cv::Point2i start_position, end_position;
 
     // C++ random numbers
-    std::random_device r; // Seed with a real random value, if available
+    std::random_device r;
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<int> uniform_height(1, map.rows - 2); // uniform distribution between int..int
+    std::uniform_int_distribution<int> uniform_height(1, map.rows - 2);
     std::uniform_int_distribution<int> uniform_width(1, map.cols - 2);
-    std::uniform_int_distribution<int> uniform_block(0, 15); // how often are walls generated: 0=wall, anything else=empty
+    std::uniform_int_distribution<int> uniform_block(0, 15);
 
     // inner maze 
     for (int j = 0; j < map.rows; j++) {
@@ -342,13 +341,13 @@ void App::genLabyrinth(cv::Mat& map) {
     do {
         start_position.x = uniform_width(e1);
         start_position.y = uniform_height(e1);
-    } while (getmap(map, start_position.x, start_position.y) == '#'); // check wall
+    } while (getmap(map, start_position.x, start_position.y) == '#');
 
     // gen end different from start, inside maze (excluding outer walls) 
     do {
         end_position.x = uniform_width(e1);
         end_position.y = uniform_height(e1);
-    } while (start_position == end_position || getmap(map, end_position.x, end_position.y) == '#'); // check overlap and wall
+    } while (start_position == end_position || getmap(map, end_position.x, end_position.y) == '#');
     map.at<uchar>(cv::Point(end_position.x, end_position.y)) = 'e';
 
     std::cout << "Start: " << start_position << std::endl;
@@ -368,7 +367,7 @@ void App::genLabyrinth(cv::Mat& map) {
     // set player position in 3D space (transform X-Y in map to XYZ in GL)
     camera.Position.x = (start_position.x) + 0.5f;
     camera.Position.z = (start_position.y) + 0.5f;
-    camera.Position.y = 0.5f; // Výška oèí
+    camera.Position.y = 0.5f;
 }
 
 void App::createMazeModel() {
@@ -379,8 +378,8 @@ void App::createMazeModel() {
     }
 
     // Atlas je 16x16 textur
-    const int texCount = 16; // Poèet textur v každém smìru
-    const int tileSize = atlas.cols / texCount; // Velikost jedné textury v pixelech
+    const int texCount = 16;
+    const int tileSize = atlas.cols / texCount;
 
     // Uložení textur
     auto saveTextureFromAtlas = [&](int row, int col, const std::string& filename) {
@@ -391,8 +390,8 @@ void App::createMazeModel() {
         };
 
     // Uložení textur
-    saveTextureFromAtlas(1, 1, "floor.png"); // Podlaha
-    saveTextureFromAtlas(3, 2, "wall.png");  // Zdi
+    saveTextureFromAtlas(1, 1, "floor.png");
+    saveTextureFromAtlas(3, 2, "wall.png");
 
     // Naètení textur
     wall_textures.clear();
@@ -410,7 +409,7 @@ void App::createMazeModel() {
         for (int i = 0; i < 15; i++) {
             Model* floor = new Model("resources/models/cube.obj", shader);
             floor->meshes[0].texture_id = floorTexture;
-            floor->origin = glm::vec3(i, 0.0f, j); // Spodní vrstva
+            floor->origin = glm::vec3(i, 0.0f, j);
             floor->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             maze_walls.push_back(floor);
         }
@@ -419,10 +418,10 @@ void App::createMazeModel() {
     // **Vytvoøení zdí (z `maze_map`)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            if (getmap(maze_map, i, j) == '#') { // Pokud je tam zeï
+            if (getmap(maze_map, i, j) == '#') {
                 Model* wall = new Model("resources/models/cube.obj", shader);
                 wall->meshes[0].texture_id = wallTexture;
-                wall->origin = glm::vec3(i, 1.0f, j); // Umístìní nad podlahu
+                wall->origin = glm::vec3(i, 1.0f, j);
                 wall->scale = glm::vec3(1.0f, 1.0f, 1.0f);
                 maze_walls.push_back(wall);
             }
@@ -512,6 +511,9 @@ bool App::run() {
 
         // Vykreslení slunce
         if (sunModel) {
+            // Zajistit, že pozice modelu slunce přesně odpovídá pozici světla
+            sunModel->origin = pointLightPosition;
+
             // Nastavení model matice pro slunce
             shader.setUniform("uM_m", sunModel->getModelMatrix());
             // Nastavení barvy slunce (jasná žlutá)
@@ -625,80 +627,49 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
             // Ovládání pozice světla pomocí šipek
         case GLFW_KEY_UP:
             app->pointLightPosition.y += 0.1f;
-
-            // Aktualizace pozice slunce (kostky)
-            for (auto& model : app->maze_walls) {
-                // Najdeme model slunce - žlutá kostka nad mapou
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
 
         case GLFW_KEY_DOWN:
             app->pointLightPosition.y -= 0.1f;
-
-            // Aktualizace pozice slunce
-            for (auto& model : app->maze_walls) {
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
 
         case GLFW_KEY_LEFT:
             app->pointLightPosition.x -= 0.1f;
-
-            // Aktualizace pozice slunce
-            for (auto& model : app->maze_walls) {
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
 
         case GLFW_KEY_RIGHT:
             app->pointLightPosition.x += 0.1f;
-
-            // Aktualizace pozice slunce
-            for (auto& model : app->maze_walls) {
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
 
         case GLFW_KEY_PAGE_UP:
             app->pointLightPosition.z -= 0.1f;
-
-            // Aktualizace pozice slunce
-            for (auto& model : app->maze_walls) {
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
 
         case GLFW_KEY_PAGE_DOWN:
             app->pointLightPosition.z += 0.1f;
-
-            // Aktualizace pozice slunce
-            for (auto& model : app->maze_walls) {
-                if (glm::distance(model->origin, glm::vec3(7.5f, 8.0f, 7.5f)) < 2.0f &&
-                    model->origin.y > 5.0f) {
-                    model->origin = app->pointLightPosition;
-                    break;
-                }
+            // Aktualizace pozice objektu slunce
+            if (app->sunModel) {
+                app->sunModel->origin = app->pointLightPosition;
             }
             break;
         }
@@ -739,16 +710,18 @@ void App::createSunModel() {
     pointLightPosition = glm::vec3(7.5f, 8.0f, 7.5f);
 
     // Vytvoření viditelného objektu reprezentujícího slunce
-    Model* sun = new Model("resources/models/cube.obj", shader);
+    sunModel = new Model("resources/models/cube.obj", shader);
 
     // Nastavení jasně žluté barvy pro slunce
-    sun->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // Čistě žlutá barva
+    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 
-    // Nastavení pozice a měřítka - přesně nad středem mapy
-    sun->origin = pointLightPosition;
-    sun->scale = glm::vec3(0.5f); // Menší kostka jako slunce
+    // Nastavení PŘESNĚ STEJNÉ pozice jako má světlo
+    sunModel->origin = pointLightPosition;
+    sunModel->scale = glm::vec3(0.5f);
 
-    // Přidání do seznamu modelů
-    maze_walls.push_back(sun);
+    std::cout << "Inicializace slunce - pozice světla: ("
+        << pointLightPosition.x << ", "
+        << pointLightPosition.y << ", "
+        << pointLightPosition.z << ")" << std::endl;
 }
 
