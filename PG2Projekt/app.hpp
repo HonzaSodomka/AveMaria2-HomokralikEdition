@@ -9,7 +9,8 @@
 #include "ShaderProgram.hpp"
 #include "Camera.hpp"
 #include "Model.hpp"
-#include "Light.hpp"  // Přidána reference na Light.hpp
+#include "Light.hpp"
+#include "ParticleSystem.hpp"
 
 class App {
 public:
@@ -46,6 +47,13 @@ private:
     GLuint lampVAO = 0;
     Model* sunModel = nullptr;
 
+    // Systém částic pro fontánu
+    ParticleSystem* fountain = nullptr;  // Přidaný systém částic
+    Model* particleModel = nullptr;      // Model používaný pro částice
+
+    // Čas pro aktualizaci částic
+    float lastFrameTime = 0.0f;
+
     // Mapa a objekty
     cv::Mat maze_map;
     std::vector<Model*> maze_walls;
@@ -65,7 +73,8 @@ private:
     void createMazeModel();
     void createTransparentBunnies();
     void createSunModel();
-    void createColoredLights(); // Nová metoda pro vytvoření barevných světel
+    void createColoredLights();
+    void createFountain();  // Nová metoda pro vytvoření fontány
     GLuint textureInit(const std::filesystem::path& filepath);
     GLuint gen_tex(cv::Mat& image);
     uchar getmap(cv::Mat& map, int x, int y);

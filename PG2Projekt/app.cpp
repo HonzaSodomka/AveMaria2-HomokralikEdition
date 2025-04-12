@@ -17,7 +17,9 @@ App::App() :
     lastX(400.0),
     lastY(300.0),
     firstMouse(true),
-    fov(DEFAULT_FOV)
+    fov(DEFAULT_FOV),
+    fountain(nullptr),
+    particleModel(nullptr)
 {
     // Pozice světla uprostřed mapy (15x15 / 2)
     pointLightPosition = glm::vec3(7.5f, 2.0f, 7.5f);
@@ -62,6 +64,18 @@ App::~App() {
     }
     transparent_bunnies.clear();
     glDeleteVertexArrays(1, &lampVAO);
+
+    // Uvolnění systému částic fontány
+    if (fountain) {
+        delete fountain;
+        fountain = nullptr;
+    }
+
+    // Uvolnění modelu částic
+    if (particleModel) {
+        delete particleModel;
+        particleModel = nullptr;
+    }
 }
 
 bool App::init(GLFWwindow* win) {
@@ -229,6 +243,17 @@ void App::init_assets() {
     }
     catch (const std::exception& e) {
         std::cerr << "Colored lights creation error: " << e.what() << std::endl;
+        throw;
+    }
+
+    // Vytvoření fontány
+    try {
+        std::cout << "Creating fountain..." << std::endl;
+        createFountain();
+        std::cout << "Fountain created successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Fountain creation error: " << e.what() << std::endl;
         throw;
     }
 }
@@ -466,10 +491,10 @@ bool App::run() {
     shader.activate();
 
     // Vypíšeme pozici světla pro debugging
-    std::cout << "Light position: " <<
-        pointLightPosition.x << ", " <<
-        pointLightPosition.y << ", " <<
-        pointLightPosition.z << std::endl;
+    std::cout << "Light position: "
+        << pointLightPosition[0] << ", "
+        << pointLightPosition[1] << ", "
+        << pointLightPosition[2] << std::endl;
 
     // Nastavení světel
     // Původní světlo (nyní jako index 0)
@@ -550,6 +575,11 @@ bool App::run() {
         // Aktualizace pohledové matice
         shader.setUniform("uV_m", camera.GetViewMatrix());
 
+        // Aktualizace systému částic fontány
+        if (fountain) {
+            fountain->Update(deltaTime);
+        }
+
         // Vyèištìní obrazovky
         glClearColor(0.1f, 0.1f, 0.2f, 1.0f); // Tmavě modrá obloha
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -619,6 +649,11 @@ bool App::run() {
             shader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
             // Vykreslení modelu
             model->draw();
+        }
+
+        // Vykreslení fontány
+        if (fountain) {
+            fountain->Draw();
         }
 
         // 6. OBNOVENÍ PÙVODNÍHO STAVU OPENGL
@@ -841,4 +876,20 @@ void App::createColoredLights() {
         << blueLight.GetPosition().x << ", " << blueLight.GetPosition().y << ", " << blueLight.GetPosition().z
         << "), Model pozice: ("
         << blueLightModel->origin.x << ", " << blueLightModel->origin.y << ", " << blueLightModel->origin.z << ")" << std::endl;
+}
+
+void App::createFountain() {
+    // Vytvoření modelu pro částice (použijeme jednoduchou kostku)
+    particleModel = new Model("resources/models/cube.obj", shader);
+
+    // Umístění fontány do středu bludiště
+    glm::vec3 fountainPosition = glm::vec3(7.5f, 0.1f, 7.5f);
+
+    // Vytvoření systému částic pro fontánu
+    fountain = new ParticleSystem(particleModel, shader, fountainPosition, 0.3f);
+
+    std::cout << "Fountain initialized at position (" <<
+        fountainPosition.x << ", " <<
+        fountainPosition.y << ", " <<
+        fountainPosition.z << ")" << std::endl;
 }
