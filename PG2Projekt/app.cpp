@@ -39,6 +39,17 @@ App::~App() {
         sunModel = nullptr;
     }
 
+    // Uvolnění modelů barevných světel
+    if (redLightModel) {
+        delete redLightModel;
+        redLightModel = nullptr;
+    }
+
+    if (blueLightModel) {
+        delete blueLightModel;
+        blueLightModel = nullptr;
+    }
+
     // Uvolnìní modelù bludištì
     for (auto& wall : maze_walls) {
         delete wall;
@@ -207,6 +218,17 @@ void App::init_assets() {
     }
     catch (const std::exception& e) {
         std::cerr << "Sun light setup error: " << e.what() << std::endl;
+        throw;
+    }
+
+    // Přidání barevných světel
+    try {
+        std::cout << "Creating colored lights..." << std::endl;
+        createColoredLights();
+        std::cout << "Colored lights created successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Colored lights creation error: " << e.what() << std::endl;
         throw;
     }
 }
@@ -449,9 +471,28 @@ bool App::run() {
         pointLightPosition.y << ", " <<
         pointLightPosition.z << std::endl;
 
-    // Nastavení světla
-    shader.setUniform("lightPos", pointLightPosition);
-    shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.0f)); // Žlutá barva
+    // Nastavení světel
+    // Původní světlo (nyní jako index 0)
+    PointLight mainLight(
+        pointLightPosition,           // stejná pozice jako dřív
+        glm::vec3(1.0f, 1.0f, 0.0f),  // žlutá barva
+        1.0f, 0.09f, 0.032f           // parametry útlumu
+    );
+    // Hlavní světlo (žluté)
+    mainLight.SetPosition(pointLightPosition); // aktualizace pozice hlavního světla
+    mainLight.SetUniforms(shader, 0);
+
+    // Červené a modré světlo (statické, neměnné)
+    redLightModel->origin = redLight.GetPosition();
+    blueLightModel->origin = blueLight.GetPosition();
+
+    // Červené světlo (nyní jako index 1)
+    redLight.SetUniforms(shader, 1);
+
+    // Modré světlo (nyní jako index 2)
+    blueLight.SetUniforms(shader, 2);
+
+    // Nastavení pozice kamery pro výpočet spekulárních odlesků
     shader.setUniform("viewPos", camera.Position);
 
     // Inicializace projekèní a pohledové matice
@@ -472,9 +513,26 @@ bool App::run() {
         lastFrameTime = currentTime;
 
         shader.activate();
-        shader.setUniform("lightPos", pointLightPosition);
-        shader.setUniform("lightColor", glm::vec3(1.0f, 1.0f, 0.0f));
+
+        // Aktualizace světel v každém snímku
+        // Hlavní světlo (žluté)
+        mainLight.SetPosition(pointLightPosition); // aktualizace pozice hlavního světla
+        mainLight.SetUniforms(shader, 0);
+
+        // Červené a modré světlo (statické, neměnné)
+        redLight.SetUniforms(shader, 1);
+        blueLight.SetUniforms(shader, 2);
+
+        // Aktualizace pozice kamery pro výpočet odlesků
         shader.setUniform("viewPos", camera.Position);
+
+        // Získání aktuálních pozic světel
+        glm::vec3 currentRedLightPos = redLight.GetPosition();
+        glm::vec3 currentBlueLightPos = blueLight.GetPosition();
+
+        // Explicitní aktualizace pozic modelů světel
+        redLightModel->origin = currentRedLightPos;
+        blueLightModel->origin = currentBlueLightPos;
 
         // Mìøení FPS
         frameCount++;
@@ -528,6 +586,10 @@ bool App::run() {
         for (auto& bunny : transparent_bunnies) {
             transparent_objects.push_back(bunny);
         }
+
+        // Přidání modelů barevných světel do seznamu transparentních objektů
+        transparent_objects.push_back(redLightModel);
+        transparent_objects.push_back(blueLightModel);
 
         // 3. SEØADÍME TRANSPARENTNÍ OBJEKTY OD NEJVZDÁLENÌJŠÍHO K NEJBLIŽŠÍMU
         std::sort(transparent_objects.begin(), transparent_objects.end(),
@@ -725,3 +787,58 @@ void App::createSunModel() {
         << pointLightPosition.z << ")" << std::endl;
 }
 
+// Metoda pro vytvoření barevných světel s explicitním nastavením pozic
+void App::createColoredLights() {
+    // Explicitně definované pozice světel
+    glm::vec3 redLightPos = glm::vec3(1.0f, 4.0f, 1.0f);
+    glm::vec3 blueLightPos = glm::vec3(13.0f, 4.0f, 13.0f);
+
+    // Barvy světel
+    glm::vec3 redLightColor = glm::vec3(1.0f, 0.2f, 0.2f);
+    glm::vec3 blueLightColor = glm::vec3(0.2f, 0.2f, 1.0f);
+
+    // Inicializace červeného světla
+    redLight = PointLight(
+        redLightPos,         // pozice
+        redLightColor,       // barva (červená)
+        1.0f,                // konstanta útlumu
+        0.09f,               // lineární útlum
+        0.032f               // kvadratický útlum
+    );
+
+    // Vytvoření modelu pro červené světlo
+    redLightModel = new Model("resources/models/cube.obj", shader);
+    // Nastavení PŘESNĚ STEJNÉ pozice jako světlo
+    redLightModel->origin = redLightPos;  // Použití stejné proměnné pro obě pozice
+    redLightModel->scale = glm::vec3(0.4f);
+    redLightModel->meshes[0].diffuse_material = glm::vec4(redLightColor, 0.5f);
+    redLightModel->transparent = true;
+
+    // Inicializace modrého světla
+    blueLight = PointLight(
+        blueLightPos,        // pozice
+        blueLightColor,      // barva (modrá)
+        1.0f,                // konstanta útlumu
+        0.09f,               // lineární útlum
+        0.032f               // kvadratický útlum
+    );
+
+    // Vytvoření modelu pro modré světlo
+    blueLightModel = new Model("resources/models/cube.obj", shader);
+    // Nastavení PŘESNĚ STEJNÉ pozice jako světlo
+    blueLightModel->origin = blueLightPos;  // Použití stejné proměnné pro obě pozice
+    blueLightModel->scale = glm::vec3(0.4f);
+    blueLightModel->meshes[0].diffuse_material = glm::vec4(blueLightColor, 0.5f);
+    blueLightModel->transparent = true;
+
+    // Výpis pozic do konzole pro debugging
+    std::cout << "Červené světlo - PointLight pozice: ("
+        << redLight.GetPosition().x << ", " << redLight.GetPosition().y << ", " << redLight.GetPosition().z
+        << "), Model pozice: ("
+        << redLightModel->origin.x << ", " << redLightModel->origin.y << ", " << redLightModel->origin.z << ")" << std::endl;
+
+    std::cout << "Modré světlo - PointLight pozice: ("
+        << blueLight.GetPosition().x << ", " << blueLight.GetPosition().y << ", " << blueLight.GetPosition().z
+        << "), Model pozice: ("
+        << blueLightModel->origin.x << ", " << blueLightModel->origin.y << ", " << blueLightModel->origin.z << ")" << std::endl;
+}

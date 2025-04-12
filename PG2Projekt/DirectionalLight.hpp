@@ -53,11 +53,11 @@ public:
 
     // Nastavení všech uniforem pro světlo do shaderu
     void SetUniforms(ShaderProgram& shader) const {
-        shader.Use();
+        shader.activate();
 
-        shader.SetUniform("dirLight.direction", _direction);
-        shader.SetUniform("dirLight.ambient", _ambient);
-        shader.SetUniform("dirLight.diffuse", _diffuse);
-        shader.SetUniform("dirLight.specular", _specular);
+        shader.setUniform("dirLight.direction", _direction);
+        shader.setUniform("dirLight.ambient", _ambient);
+        shader.setUniform("dirLight.diffuse", _diffuse);
+        shader.setUniform("dirLight.specular", _specular);
     }
 };

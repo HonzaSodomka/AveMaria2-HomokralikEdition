@@ -7,9 +7,7 @@
 class PointLight {
 private:
     glm::vec3 _position;      // Pozice světla
-    glm::vec3 _ambient;       // Ambient složka (základní okolní osvětlení)
-    glm::vec3 _diffuse;       // Diffuse složka (rozptýlené světlo)
-    glm::vec3 _specular;      // Specular složka (odlesky)
+    glm::vec3 _color;         // Barva světla
 
     // Koeficienty útlumu světla se vzdáleností
     float _constant;          // Konstantní složka útlumu
@@ -20,17 +18,13 @@ public:
     // Konstruktor s výchozími hodnotami
     PointLight(
         const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f),
-        const glm::vec3& ambient = glm::vec3(0.1f, 0.1f, 0.1f),
-        const glm::vec3& diffuse = glm::vec3(0.8f, 0.8f, 0.8f),
-        const glm::vec3& specular = glm::vec3(1.0f, 1.0f, 1.0f),
+        const glm::vec3& color = glm::vec3(1.0f, 1.0f, 1.0f),
         float constant = 1.0f,
         float linear = 0.09f,
         float quadratic = 0.032f
     ) :
         _position(position),
-        _ambient(ambient),
-        _diffuse(diffuse),
-        _specular(specular),
+        _color(color),
         _constant(constant),
         _linear(linear),
         _quadratic(quadratic) {}
@@ -39,14 +33,8 @@ public:
     glm::vec3 GetPosition() const { return _position; }
     void SetPosition(const glm::vec3& position) { _position = position; }
 
-    glm::vec3 GetAmbient() const { return _ambient; }
-    void SetAmbient(const glm::vec3& ambient) { _ambient = ambient; }
-
-    glm::vec3 GetDiffuse() const { return _diffuse; }
-    void SetDiffuse(const glm::vec3& diffuse) { _diffuse = diffuse; }
-
-    glm::vec3 GetSpecular() const { return _specular; }
-    void SetSpecular(const glm::vec3& specular) { _specular = specular; }
+    glm::vec3 GetColor() const { return _color; }
+    void SetColor(const glm::vec3& color) { _color = color; }
 
     float GetConstant() const { return _constant; }
     void SetConstant(float constant) { _constant = constant; }
@@ -57,23 +45,17 @@ public:
     float GetQuadratic() const { return _quadratic; }
     void SetQuadratic(float quadratic) { _quadratic = quadratic; }
 
-    // Nastavení barvy světla (ovlivní všechny složky s různou intenzitou)
-    void SetColor(const glm::vec3& color) {
-        _ambient = color * 0.1f;  // Nízká intenzita pro ambient
-        _diffuse = color * 0.8f;  // Střední intenzita pro diffuse
-        _specular = color;        // Plná intenzita pro specular
-    }
+    // Nastavení všech uniforem pro světlo do shaderu - upraveno pro index světla
+    void SetUniforms(ShaderProgram& shader, int lightIndex) const {
+        shader.activate();
 
-    // Nastavení všech uniforem pro světlo do shaderu
-    void SetUniforms(ShaderProgram& shader) const {
-        shader.Use();
+        // Použití indexu pro nastavení správného světla v poli
+        std::string lightPrefix = "lights[" + std::to_string(lightIndex) + "]";
 
-        shader.SetUniform("light.position", _position);
-        shader.SetUniform("light.ambient", _ambient);
-        shader.SetUniform("light.diffuse", _diffuse);
-        shader.SetUniform("light.specular", _specular);
-        shader.SetUniform("light.constant", _constant);
-        shader.SetUniform("light.linear", _linear);
-        shader.SetUniform("light.quadratic", _quadratic);
+        shader.setUniform(lightPrefix + ".position", _position);
+        shader.setUniform(lightPrefix + ".color", _color);
+        shader.setUniform(lightPrefix + ".constant", _constant);
+        shader.setUniform(lightPrefix + ".linear", _linear);
+        shader.setUniform(lightPrefix + ".quadratic", _quadratic);
     }
 };

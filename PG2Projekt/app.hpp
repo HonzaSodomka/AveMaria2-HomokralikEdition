@@ -9,6 +9,7 @@
 #include "ShaderProgram.hpp"
 #include "Camera.hpp"
 #include "Model.hpp"
+#include "Light.hpp"  // Přidána reference na Light.hpp
 
 class App {
 public:
@@ -33,8 +34,15 @@ private:
     Model* triangle = nullptr;
     Camera camera;
 
-    // Světlo
-    glm::vec3 pointLightPosition;
+    // Světla
+    glm::vec3 pointLightPosition;  // Původní žluté světlo (pozice slunce)
+
+    // Nová světla (červené a modré)
+    PointLight redLight;           // Červené světlo
+    PointLight blueLight;          // Modré světlo
+    Model* redLightModel = nullptr;  // Model pro červené světlo
+    Model* blueLightModel = nullptr; // Model pro modré světlo
+
     GLuint lampVAO = 0;
     Model* sunModel = nullptr;
 
@@ -57,6 +65,7 @@ private:
     void createMazeModel();
     void createTransparentBunnies();
     void createSunModel();
+    void createColoredLights(); // Nová metoda pro vytvoření barevných světel
     GLuint textureInit(const std::filesystem::path& filepath);
     GLuint gen_tex(cv::Mat& image);
     uchar getmap(cv::Mat& map, int x, int y);
