@@ -9,6 +9,14 @@
 #include "Model.hpp"
 #include "Camera.hpp"
 
+// Struktura pro smìrové svìtlo
+struct DirectionalLight {
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
 class App {
 public:
     App();
@@ -26,15 +34,25 @@ public:
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 private:
     ShaderProgram shader;
+    ShaderProgram lightingShader; // Nový shader pro osvìtlení
+
     Model* triangle{ nullptr };
     // Bludištì
     cv::Mat maze_map;
     std::vector<Model*> maze_walls;
     std::vector<GLuint> wall_textures;
 
-    // PØIDÁNO PRO ÚKOL 1: Transparentní králíci
+    // Transparentní králíci
     std::vector<Model*> transparent_bunnies;
     void createTransparentBunnies();
+
+    // Osvìtlení
+    DirectionalLight dirLight; // Smìrové svìtlo (slunce)
+    Model* sunModel{ nullptr }; // Model slunce
+    void initLighting();      // Inicializace osvìtlení
+    void updateLighting(float deltaTime); // Aktualizace parametrù osvìtlení v èase
+    void setupLightingUniforms(); // Nastavení uniforms pro osvìtlení
+    void createSunModel();    // Vytvoøení modelu slunce
 
     // Metody pro práci s bludištìm
     void genLabyrinth(cv::Mat& map);

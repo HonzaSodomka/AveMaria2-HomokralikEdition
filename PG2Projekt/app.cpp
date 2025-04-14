@@ -21,14 +21,28 @@ App::App() :
 {
     // Nastavení poèáteèní pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
+
+    // Inicializace smìrového svìtla
+    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // Smìr - dolù a dopøedu
+    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient složka
+    dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse složka
+    dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular složka
 }
 
 App::~App() {
     // Úklid
     shader.clear();
+    lightingShader.clear();
+
     if (triangle) {
         delete triangle;
         triangle = nullptr;
+    }
+
+    // Uvolnìní modelu slunce
+    if (sunModel) {
+        delete sunModel;
+        sunModel = nullptr;
     }
 
     // Uvolnìní modelù bludištì
@@ -85,10 +99,19 @@ bool App::init(GLFWwindow* win) {
     // První aktualizace projekèní matice
     update_projection_matrix();
 
+    // Inicializace osvìtlení
+    initLighting();
+
     // Explicitní nastavení view matice
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uV_m", camera.GetViewMatrix());
+    }
+
+    if (lightingShader.getID() != 0) {
+        lightingShader.activate();
+        lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+        lightingShader.setUniform("viewPos", camera.Position);
     }
 
     return true;
@@ -99,6 +122,10 @@ void App::init_assets() {
     try {
         std::cout << "Loading shaders..." << std::endl;
         shader = ShaderProgram("resources/shaders/tex.vert", "resources/shaders/tex.frag");
+
+        // Naètení shaderù pro osvìtlení
+        lightingShader = ShaderProgram("resources/shaders/directional.vert", "resources/shaders/directional.frag");
+
         std::cout << "Shaders loaded successfully" << std::endl;
     }
     catch (const std::exception& e) {
@@ -127,6 +154,54 @@ void App::init_assets() {
         std::cerr << "Transparent bunnies creation error: " << e.what() << std::endl;
         throw;
     }
+
+    // Vytvoøení modelu slunce
+    try {
+        std::cout << "Creating sun model..." << std::endl;
+        createSunModel();
+        std::cout << "Sun model created successfully" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Sun model creation error: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+// Nová metoda pro inicializaci osvìtlení
+void App::initLighting() {
+    // Nastavení light uniforms pro osvìtlení
+    lightingShader.activate();
+
+    // Nastavení smìrového svìtla
+    lightingShader.setUniform("lightDir", dirLight.direction);
+    lightingShader.setUniform("lightAmbient", dirLight.ambient);
+    lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
+    lightingShader.setUniform("lightSpecular", dirLight.specular);
+
+    // Výchozí materiál
+    lightingShader.setUniform("ambientMaterial", glm::vec3(0.2f, 0.2f, 0.2f));
+    lightingShader.setUniform("diffuseMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
+    lightingShader.setUniform("specularMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
+    lightingShader.setUniform("shininess", 32.0f);
+
+    // Deaktivace shaderu
+    lightingShader.deactivate();
+}
+
+
+void App::setupLightingUniforms() {
+    lightingShader.activate();
+
+    // Nastavení smìrového svìtla
+    lightingShader.setUniform("lightDir", dirLight.direction);
+    lightingShader.setUniform("lightAmbient", dirLight.ambient);
+    lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
+    lightingShader.setUniform("lightSpecular", dirLight.specular);
+
+    // Nastavení pozice kamery pro spekulární výpoèty (v world space)
+    lightingShader.setUniform("viewPos", camera.Position);
+
+    lightingShader.deactivate();
 }
 
 void App::createTransparentBunnies() {
@@ -149,8 +224,8 @@ void App::createTransparentBunnies() {
 
     // Vytvoøení tøí transparentních králíkù
     for (int i = 0; i < 3; i++) {
-        // Vytvoøení modelu králíka
-        Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", shader);
+        // Vytvoøení modelu králíka - nyní použijeme lightingShader
+        Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", lightingShader);
 
         // Nastavení textury a barvy s prùhledností
         bunny->meshes[0].texture_id = bunnyTexture;
@@ -166,6 +241,60 @@ void App::createTransparentBunnies() {
         // Pøidání do vektoru transparentních králíkù
         transparent_bunnies.push_back(bunny);
     }
+}
+
+// Metoda pro vytvoøení modelu slunce
+void App::createSunModel() {
+    // Vytvoøení modelu slunce (koule) - použijeme pùvodní shader bez osvìtlení, aby slunce vždy svítilo
+    sunModel = new Model("resources/models/sphere.obj", shader);
+
+    // Vytvoøení textury slunce (žlutá koule)
+    cv::Mat sunTexture(64, 64, CV_8UC3, cv::Scalar(255, 255, 0)); // Žlutá barva
+
+    // Uložení textury
+    cv::imwrite("resources/textures/sun.png", sunTexture);
+
+    // Naètení textury pro slunce
+    GLuint sunTextureID = textureInit("resources/textures/sun.png");
+
+    // Nastavení textury a materiálu
+    sunModel->meshes[0].texture_id = sunTextureID;
+    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0, 1.0f); // Žlutá barva
+
+    // Nastavení velikosti
+    sunModel->scale = glm::vec3(2.0f, 2.0f, 2.0f);
+
+    // Výchozí pozice slunce (bude aktualizována v updateLighting)
+    sunModel->origin = glm::vec3(0.0f, 30.0f, 0.0f);
+}
+
+void App::updateLighting(float deltaTime) {
+    // Pomalá rotace smìru svìtla pro simulaci pohybu slunce
+    static float angle = 0.0f;
+    angle += 0.1f * deltaTime; // Rychlost rotace
+
+    // Aktualizace smìru svìtla (v world space)
+    dirLight.direction.x = sin(angle);
+    dirLight.direction.y = -1.0f;
+    dirLight.direction.z = cos(angle);
+
+    // Normalizace smìru
+    dirLight.direction = glm::normalize(dirLight.direction);
+
+    // Pevný støed bludištì - nezávislý na kameøe
+    const glm::vec3 mazeCenter(7.5f, 0.0f, 7.5f); // Pro bludištì 15x15
+
+    // Aktualizace pozice modelu slunce (fixní trajektorie kolem støedu bludištì)
+    const float sunDistance = 50.0f;
+    const float sunHeight = 20.0f;
+
+    // Umístìní slunce kolem støedu bludištì
+    sunModel->origin.x = mazeCenter.x - dirLight.direction.x * sunDistance;
+    sunModel->origin.y = sunHeight;
+    sunModel->origin.z = mazeCenter.z - dirLight.direction.z * sunDistance;
+
+    // Nastavení uniforms pro osvìtlení
+    setupLightingUniforms();
 }
 
 GLuint App::textureInit(const std::filesystem::path& filepath) {
@@ -326,7 +455,8 @@ void App::createMazeModel() {
     // **Vytvoøení podlahy (15x15)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            Model* floor = new Model("resources/models/cube.obj", shader);
+            // Použití lightingShader místo pùvodního shader
+            Model* floor = new Model("resources/models/cube.obj", lightingShader);
             floor->meshes[0].texture_id = floorTexture;
             floor->origin = glm::vec3(i, 0.0f, j); // Spodní vrstva
             floor->scale = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -338,7 +468,8 @@ void App::createMazeModel() {
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
             if (getmap(maze_map, i, j) == '#') { // Pokud je tam zeï
-                Model* wall = new Model("resources/models/cube.obj", shader);
+                // Použití lightingShader místo pùvodního shader
+                Model* wall = new Model("resources/models/cube.obj", lightingShader);
                 wall->meshes[0].texture_id = wallTexture;
                 wall->origin = glm::vec3(i, 1.0f, j); // Umístìní nad podlahu
                 wall->scale = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -360,11 +491,12 @@ bool App::run() {
     }
 
     // Aktivace shader programu
-    shader.activate();
+    lightingShader.activate();
 
     // Inicializace projekèní a pohledové matice
     update_projection_matrix();
-    shader.setUniform("uV_m", camera.GetViewMatrix());
+    lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+    lightingShader.setUniform("viewPos", camera.Position);
 
     // Promìnné pro mìøení FPS a deltaTime
     double lastTime = glfwGetTime();
@@ -392,8 +524,13 @@ bool App::run() {
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
         camera.Move(direction);
 
-        // Aktualizace pohledové matice
-        shader.setUniform("uV_m", camera.GetViewMatrix());
+        // Aktualizace pohledové matice a pozice kamery
+        lightingShader.activate();
+        lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+        lightingShader.setUniform("viewPos", camera.Position);
+
+        // Aktualizace osvìtlení
+        updateLighting(deltaTime);
 
         // Vyèištìní obrazovky
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -406,7 +543,8 @@ bool App::run() {
         // Vykreslení bludištì (neprùhledné objekty)
         for (auto& wall : maze_walls) {
             // Nastavení model matice v shaderu
-            shader.setUniform("uM_m", wall->getModelMatrix());
+            lightingShader.setUniform("uM_m", wall->getModelMatrix());
+            lightingShader.setUniform("transparent", false);
             // Vykreslení modelu
             wall->draw();
         }
@@ -440,9 +578,10 @@ bool App::run() {
         // 5. VYKRESLENÍ TRANSPARENTNÍCH OBJEKTÙ
         for (auto* model : transparent_objects) {
             // Nastavení model matice v shaderu
-            shader.setUniform("uM_m", model->getModelMatrix());
+            lightingShader.setUniform("uM_m", model->getModelMatrix());
             // Nastavení diffuse materiálu (vèetnì alpha)
-            shader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
+            lightingShader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
+            lightingShader.setUniform("transparent", true);
             // Vykreslení modelu
             model->draw();
         }
@@ -450,6 +589,16 @@ bool App::run() {
         // 6. OBNOVENÍ PÙVODNÍHO STAVU OPENGL
         glDepthMask(GL_TRUE);  // Povolit zápis do depth bufferu
         glDisable(GL_BLEND);   // Vypnout blending
+
+        // 7. VYKRESLENÍ SLUNCE (používáme pùvodní shader, aby bylo jasnì viditelné)
+        if (sunModel) {
+            shader.activate();
+            shader.setUniform("uP_m", projection_matrix);
+            shader.setUniform("uV_m", camera.GetViewMatrix());
+            shader.setUniform("uM_m", sunModel->getModelMatrix());
+            shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Jasnì žlutá barva
+            sunModel->draw();
+        }
 
         // Výmìna bufferù a zpracování událostí
         glfwSwapBuffers(window);
@@ -477,10 +626,15 @@ void App::update_projection_matrix() {
         20000.0f             // Far clipping plane
     );
 
-    // Nastavení uniform v shaderu
+    // Nastavení uniform v shaderech
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uP_m", projection_matrix);
+    }
+
+    if (lightingShader.getID() != 0) {
+        lightingShader.activate();
+        lightingShader.setUniform("uP_m", projection_matrix);
     }
 }
 
