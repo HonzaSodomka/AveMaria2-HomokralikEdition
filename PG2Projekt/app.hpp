@@ -1,4 +1,4 @@
-Ôªø#pragma once
+#pragma once
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -9,7 +9,7 @@
 #include "Model.hpp"
 #include "Camera.hpp"
 
-// Struktura pro sm√¨rov√© sv√¨tlo
+// Struktura pro smÏrovÈ svÏtlo
 struct DirectionalLight {
     glm::vec3 direction;
     glm::vec3 ambient;
@@ -24,7 +24,7 @@ public:
     bool init(GLFWwindow* window);
     void init_assets();
     bool run();
-    // Na√®ten√≠ textury z obr√°zku pomoc√≠ OpenCV
+    // NaËtenÌ textury z obr·zku pomocÌ OpenCV
     GLuint textureInit(const std::filesystem::path& filepath);
     // Callback metody
     static void fbsize_callback(GLFWwindow* window, int width, int height);
@@ -34,43 +34,43 @@ public:
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 private:
     ShaderProgram shader;
-    ShaderProgram lightingShader; // Nov√Ω shader pro osv√¨tlen√≠
+    ShaderProgram lightingShader; // Nov˝ shader pro osvÏtlenÌ
 
     Model* triangle{ nullptr };
-    // Bludi≈°t√¨
+    // BludiötÏ
     cv::Mat maze_map;
     std::vector<Model*> maze_walls;
     std::vector<GLuint> wall_textures;
 
-    // Transparentn√≠ kr√°l√≠ci
+    // TransparentnÌ kr·lÌci
     std::vector<Model*> transparent_bunnies;
     void createTransparentBunnies();
 
-    // Osv√¨tlen√≠
-    DirectionalLight dirLight; // Sm√¨rov√© sv√¨tlo (slunce)
+    // OsvÏtlenÌ
+    DirectionalLight dirLight; // SmÏrovÈ svÏtlo (slunce)
     Model* sunModel{ nullptr }; // Model slunce
-    void initLighting();      // Inicializace osv√¨tlen√≠
-    void updateLighting(float deltaTime); // Aktualizace parametr√π osv√¨tlen√≠ v √®ase
-    void setupLightingUniforms(); // Nastaven√≠ uniforms pro osv√¨tlen√≠
-    void createSunModel();    // Vytvo√∏en√≠ modelu slunce
+    void initLighting();      // Inicializace osvÏtlenÌ
+    void updateLighting(float deltaTime); // Aktualizace parametr˘ osvÏtlenÌ v Ëase
+    void setupLightingUniforms(); // NastavenÌ uniforms pro osvÏtlenÌ
+    void createSunModel();    // Vytvo¯enÌ modelu slunce
 
-    // Metody pro pr√°ci s bludi≈°t√¨m
+    // Metody pro pr·ci s bludiötÏm
     void genLabyrinth(cv::Mat& map);
     uchar getmap(cv::Mat& map, int x, int y);
     void createMazeModel();
 
     GLFWwindow* window{ nullptr };
-    // Projek√®n√≠ matice a souvisej√≠c√≠ hodnoty
+    // ProjekËnÌ matice a souvisejÌcÌ hodnoty
     int width{ 800 }, height{ 600 };
     float fov{ 60.0f };
     const float DEFAULT_FOV = 60.0f;
     glm::mat4 projection_matrix{ glm::identity<glm::mat4>() };
     // Kamera
     Camera camera{ glm::vec3(0.0f, 0.0f, 3.0f) };
-    double lastX{ 400.0 }, lastY{ 300.0 }; // Posledn√≠ pozice kurzoru
-    bool firstMouse{ true };             // Prom√¨nn√° pro inicializaci pozice kurzoru
-    // Metoda pro aktualizaci projek√®n√≠ matice
+    double lastX{ 400.0 }, lastY{ 300.0 }; // PoslednÌ pozice kurzoru
+    bool firstMouse{ true };             // PromÏnn· pro inicializaci pozice kurzoru
+    // Metoda pro aktualizaci projekËnÌ matice
     void update_projection_matrix();
-    // Pomocn√° metoda pro generov√°n√≠ OpenGL textury z OpenCV obr√°zku
+    // Pomocn· metoda pro generov·nÌ OpenGL textury z OpenCV obr·zku
     GLuint gen_tex(cv::Mat& image);
 };

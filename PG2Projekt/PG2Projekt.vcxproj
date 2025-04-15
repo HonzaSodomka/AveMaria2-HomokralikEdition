@@ -139,20 +139,15 @@
     <ClCompile Include="app.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OBJloader.cpp" />
-    <ClCompile Include="ParticleSystem.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.hpp" />
     <ClInclude Include="assets.hpp" />
     <ClInclude Include="Camera.hpp" />
-    <ClInclude Include="DirectionalLight.hpp" />
-    <ClInclude Include="Light.hpp" />
-    <ClInclude Include="Material.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="Model.hpp" />
     <ClInclude Include="OBJloader.hpp" />
-    <ClInclude Include="ParticleSystem.hpp" />
     <ClInclude Include="ShaderProgram.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

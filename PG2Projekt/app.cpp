@@ -1,4 +1,4 @@
-Ôªø#include <iostream>
+#include <iostream>
 #include <string>
 #include <cmath>
 #include <random>
@@ -19,18 +19,18 @@ App::App() :
     firstMouse(true),
     fov(DEFAULT_FOV)
 {
-    // Nastaven√≠ po√®√°te√®n√≠ pozice kamery
+    // NastavenÌ poË·teËnÌ pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
 
-    // Inicializace sm√¨rov√©ho sv√¨tla
-    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // Sm√¨r - dol√π a dop√∏edu
-    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient slo≈æka
-    dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse slo≈æka
-    dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular slo≈æka
+    // Inicializace smÏrovÈho svÏtla
+    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // SmÏr - dol˘ a dop¯edu
+    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient sloûka
+    dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse sloûka
+    dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular sloûka
 }
 
 App::~App() {
-    // √öklid
+    // ⁄klid
     shader.clear();
     lightingShader.clear();
 
@@ -39,19 +39,19 @@ App::~App() {
         triangle = nullptr;
     }
 
-    // Uvoln√¨n√≠ modelu slunce
+    // UvolnÏnÌ modelu slunce
     if (sunModel) {
         delete sunModel;
         sunModel = nullptr;
     }
 
-    // Uvoln√¨n√≠ model√π bludi≈°t√¨
+    // UvolnÏnÌ model˘ bludiötÏ
     for (auto& wall : maze_walls) {
         delete wall;
     }
     maze_walls.clear();
 
-    // Uvoln√¨n√≠ transparentn√≠ch kr√°l√≠k√π
+    // UvolnÏnÌ transparentnÌch kr·lÌk˘
     for (auto& bunny : transparent_bunnies) {
         delete bunny;
     }
@@ -61,7 +61,7 @@ App::~App() {
 bool App::init(GLFWwindow* win) {
     window = win;
 
-    // Ujist√≠me se, ≈æe FOV m√° spr√°vnou hodnotu
+    // UjistÌme se, ûe FOV m· spr·vnou hodnotu
     fov = DEFAULT_FOV;
 
     if (!GLEW_ARB_direct_state_access) {
@@ -69,40 +69,40 @@ bool App::init(GLFWwindow* win) {
         return false;
     }
 
-    // Nastaven√≠ ukazatele na t√∏√≠du App pro callbacky
+    // NastavenÌ ukazatele na t¯Ìdu App pro callbacky
     glfwSetWindowUserPointer(window, this);
 
-    // Nastaven√≠ callback√π
+    // NastavenÌ callback˘
     glfwSetFramebufferSizeCallback(window, fbsize_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-    // Zak√°z√°n√≠ zobrazen√≠ kurzoru a jeho omezen√≠ na okno
+    // Zak·z·nÌ zobrazenÌ kurzoru a jeho omezenÌ na okno
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Povolen√≠ Z-bufferu pro spr√°vn√© vykreslov√°n√≠ 3D model√π
+    // PovolenÌ Z-bufferu pro spr·vnÈ vykreslov·nÌ 3D model˘
     glEnable(GL_DEPTH_TEST);
 
-    // Nastaven√≠ pro pr√πhlednost
+    // NastavenÌ pro pr˘hlednost
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Z√≠sk√°n√≠ velikosti framebufferu
+    // ZÌsk·nÌ velikosti framebufferu
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
-    // Na√®ten√≠ assets
+    // NaËtenÌ assets
     init_assets();
 
-    // Prvn√≠ aktualizace projek√®n√≠ matice
+    // PrvnÌ aktualizace projekËnÌ matice
     update_projection_matrix();
 
-    // Inicializace osv√¨tlen√≠
+    // Inicializace osvÏtlenÌ
     initLighting();
 
-    // Explicitn√≠ nastaven√≠ view matice
+    // ExplicitnÌ nastavenÌ view matice
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uV_m", camera.GetViewMatrix());
@@ -118,12 +118,12 @@ bool App::init(GLFWwindow* win) {
 }
 
 void App::init_assets() {
-    // Na√®ten√≠ shader√π
+    // NaËtenÌ shader˘
     try {
         std::cout << "Loading shaders..." << std::endl;
         shader = ShaderProgram("resources/shaders/tex.vert", "resources/shaders/tex.frag");
 
-        // Na√®ten√≠ shader√π pro osv√¨tlen√≠
+        // NaËtenÌ shader˘ pro osvÏtlenÌ
         lightingShader = ShaderProgram("resources/shaders/directional.vert", "resources/shaders/directional.frag");
 
         std::cout << "Shaders loaded successfully" << std::endl;
@@ -133,7 +133,7 @@ void App::init_assets() {
         throw;
     }
 
-    // Vytvo√∏en√≠ bludi≈°t√¨
+    // Vytvo¯enÌ bludiötÏ
     try {
         std::cout << "Creating maze..." << std::endl;
         createMazeModel();
@@ -144,7 +144,7 @@ void App::init_assets() {
         throw;
     }
 
-    // Vytvo√∏en√≠ transparentn√≠ch kr√°l√≠k√π
+    // Vytvo¯enÌ transparentnÌch kr·lÌk˘
     try {
         std::cout << "Creating transparent bunnies..." << std::endl;
         createTransparentBunnies();
@@ -155,7 +155,7 @@ void App::init_assets() {
         throw;
     }
 
-    // Vytvo√∏en√≠ modelu slunce
+    // Vytvo¯enÌ modelu slunce
     try {
         std::cout << "Creating sun model..." << std::endl;
         createSunModel();
@@ -167,18 +167,18 @@ void App::init_assets() {
     }
 }
 
-// Nov√° metoda pro inicializaci osv√¨tlen√≠
+// Nov· metoda pro inicializaci osvÏtlenÌ
 void App::initLighting() {
-    // Nastaven√≠ light uniforms pro osv√¨tlen√≠
+    // NastavenÌ light uniforms pro osvÏtlenÌ
     lightingShader.activate();
 
-    // Nastaven√≠ sm√¨rov√©ho sv√¨tla
+    // NastavenÌ smÏrovÈho svÏtla
     lightingShader.setUniform("lightDir", dirLight.direction);
     lightingShader.setUniform("lightAmbient", dirLight.ambient);
     lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
     lightingShader.setUniform("lightSpecular", dirLight.specular);
 
-    // V√Ωchoz√≠ materi√°l
+    // V˝chozÌ materi·l
     lightingShader.setUniform("ambientMaterial", glm::vec3(0.2f, 0.2f, 0.2f));
     lightingShader.setUniform("diffuseMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
     lightingShader.setUniform("specularMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
@@ -192,118 +192,118 @@ void App::initLighting() {
 void App::setupLightingUniforms() {
     lightingShader.activate();
 
-    // Nastaven√≠ sm√¨rov√©ho sv√¨tla
+    // NastavenÌ smÏrovÈho svÏtla
     lightingShader.setUniform("lightDir", dirLight.direction);
     lightingShader.setUniform("lightAmbient", dirLight.ambient);
     lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
     lightingShader.setUniform("lightSpecular", dirLight.specular);
 
-    // Nastaven√≠ pozice kamery pro spekul√°rn√≠ v√Ωpo√®ty (v world space)
+    // NastavenÌ pozice kamery pro spekul·rnÌ v˝poËty (v world space)
     lightingShader.setUniform("viewPos", camera.Position);
 
     lightingShader.deactivate();
 }
 
 void App::createTransparentBunnies() {
-    // Na√®ten√≠ textury pro kr√°l√≠ky
+    // NaËtenÌ textury pro kr·lÌky
     GLuint bunnyTexture = textureInit("resources/textures/kralik.jpg");
 
-    // Pozice pro kr√°l√≠ky v bludi≈°ti
+    // Pozice pro kr·lÌky v bludiöti
     std::vector<glm::vec3> bunny_positions = {
-        glm::vec3(0.0f, 5.0f, 3.0f),   // Prvn√≠ kr√°l√≠k
-        glm::vec3(20.0f, 5.0f, 7.0f),   // Druh√Ω kr√°l√≠k
-        glm::vec3(40.0f, 5.0f, 5.0f)   // T√∏et√≠ kr√°l√≠k
+        glm::vec3(0.0f, 5.0f, 3.0f),   // PrvnÌ kr·lÌk
+        glm::vec3(20.0f, 5.0f, 7.0f),   // Druh˝ kr·lÌk
+        glm::vec3(40.0f, 5.0f, 5.0f)   // T¯etÌ kr·lÌk
     };
 
-    // Barvy pro kr√°l√≠ky (RGBA, kde A je pr√πhlednost) - NI≈Ω≈†√ç HODNOTY ALPHA
+    // Barvy pro kr·lÌky (RGBA, kde A je pr˘hlednost) - NIéäÕ HODNOTY ALPHA
     std::vector<glm::vec4> bunny_colors = {
-        glm::vec4(1.0f, 0.3f, 0.3f, 0.8f),   // √àerven√Ω v√≠ce pr√πhledn√Ω 
-        glm::vec4(0.3f, 1.0f, 0.3f, 0.6f),   // Zelen√Ω je≈°t√¨ v√≠ce pr√πhledn√Ω
-        glm::vec4(0.3f, 0.3f, 1.0f, 0.4f)    // Modr√Ω nejv√≠ce pr√πhledn√Ω
+        glm::vec4(1.0f, 0.3f, 0.3f, 0.8f),   // »erven˝ vÌce pr˘hledn˝ 
+        glm::vec4(0.3f, 1.0f, 0.3f, 0.6f),   // Zelen˝ jeötÏ vÌce pr˘hledn˝
+        glm::vec4(0.3f, 0.3f, 1.0f, 0.4f)    // Modr˝ nejvÌce pr˘hledn˝
     };
 
-    // Vytvo√∏en√≠ t√∏√≠ transparentn√≠ch kr√°l√≠k√π
+    // Vytvo¯enÌ t¯Ì transparentnÌch kr·lÌk˘
     for (int i = 0; i < 3; i++) {
-        // Vytvo√∏en√≠ modelu kr√°l√≠ka - nyn√≠ pou≈æijeme lightingShader
+        // Vytvo¯enÌ modelu kr·lÌka - nynÌ pouûijeme lightingShader
         Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", lightingShader);
 
-        // Nastaven√≠ textury a barvy s pr√πhlednost√≠
+        // NastavenÌ textury a barvy s pr˘hlednostÌ
         bunny->meshes[0].texture_id = bunnyTexture;
         bunny->meshes[0].diffuse_material = bunny_colors[i];
 
-        // Nastaven√≠ pozice a velikosti
+        // NastavenÌ pozice a velikosti
         bunny->origin = bunny_positions[i];
-        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // Zmen≈°√≠me kr√°l√≠ky
+        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // ZmenöÌme kr·lÌky
 
-        // Ozna√®en√≠ jako transparentn√≠ objekt
+        // OznaËenÌ jako transparentnÌ objekt
         bunny->transparent = true;
 
-        // P√∏id√°n√≠ do vektoru transparentn√≠ch kr√°l√≠k√π
+        // P¯id·nÌ do vektoru transparentnÌch kr·lÌk˘
         transparent_bunnies.push_back(bunny);
     }
 }
 
-// Metoda pro vytvo√∏en√≠ modelu slunce
+// Metoda pro vytvo¯enÌ modelu slunce
 void App::createSunModel() {
-    // Vytvo√∏en√≠ modelu slunce (koule) - pou≈æijeme p√πvodn√≠ shader bez osv√¨tlen√≠, aby slunce v≈ædy sv√≠tilo
+    // Vytvo¯enÌ modelu slunce (koule) - pouûijeme p˘vodnÌ shader bez osvÏtlenÌ, aby slunce vûdy svÌtilo
     sunModel = new Model("resources/models/sphere.obj", shader);
 
-    // Vytvo√∏en√≠ textury slunce (≈ælut√° koule)
-    cv::Mat sunTexture(64, 64, CV_8UC3, cv::Scalar(255, 255, 0)); // ≈Ωlut√° barva
+    // Vytvo¯enÌ textury slunce (ûlut· koule)
+    cv::Mat sunTexture(64, 64, CV_8UC3, cv::Scalar(255, 255, 0)); // élut· barva
 
-    // Ulo≈æen√≠ textury
+    // UloûenÌ textury
     cv::imwrite("resources/textures/sun.png", sunTexture);
 
-    // Na√®ten√≠ textury pro slunce
+    // NaËtenÌ textury pro slunce
     GLuint sunTextureID = textureInit("resources/textures/sun.png");
 
-    // Nastaven√≠ textury a materi√°lu
+    // NastavenÌ textury a materi·lu
     sunModel->meshes[0].texture_id = sunTextureID;
-    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0, 1.0f); // ≈Ωlut√° barva
+    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0, 1.0f); // élut· barva
 
-    // Nastaven√≠ velikosti
+    // NastavenÌ velikosti
     sunModel->scale = glm::vec3(2.0f, 2.0f, 2.0f);
 
-    // V√Ωchoz√≠ pozice slunce (bude aktualizov√°na v updateLighting)
+    // V˝chozÌ pozice slunce (bude aktualizov·na v updateLighting)
     sunModel->origin = glm::vec3(0.0f, 30.0f, 0.0f);
 }
 
 void App::updateLighting(float deltaTime) {
-    // Pomal√° rotace sm√¨ru sv√¨tla pro simulaci pohybu slunce
+    // Pomal· rotace smÏru svÏtla pro simulaci pohybu slunce
     static float angle = 0.0f;
     angle += 0.1f * deltaTime; // Rychlost rotace
 
-    // Aktualizace sm√¨ru sv√¨tla (v world space)
+    // Aktualizace smÏru svÏtla (v world space)
     dirLight.direction.x = sin(angle);
     dirLight.direction.y = -1.0f;
     dirLight.direction.z = cos(angle);
 
-    // Normalizace sm√¨ru
+    // Normalizace smÏru
     dirLight.direction = glm::normalize(dirLight.direction);
 
-    // Pevn√Ω st√∏ed bludi≈°t√¨ - nez√°visl√Ω na kame√∏e
-    const glm::vec3 mazeCenter(7.5f, 0.0f, 7.5f); // Pro bludi≈°t√¨ 15x15
+    // Pevn˝ st¯ed bludiötÏ - nez·visl˝ na kame¯e
+    const glm::vec3 mazeCenter(7.5f, 0.0f, 7.5f); // Pro bludiötÏ 15x15
 
-    // Aktualizace pozice modelu slunce (fixn√≠ trajektorie kolem st√∏edu bludi≈°t√¨)
+    // Aktualizace pozice modelu slunce (fixnÌ trajektorie kolem st¯edu bludiötÏ)
     const float sunDistance = 50.0f;
     const float sunHeight = 20.0f;
 
-    // Um√≠st√¨n√≠ slunce kolem st√∏edu bludi≈°t√¨
+    // UmÌstÏnÌ slunce kolem st¯edu bludiötÏ
     sunModel->origin.x = mazeCenter.x - dirLight.direction.x * sunDistance;
     sunModel->origin.y = sunHeight;
     sunModel->origin.z = mazeCenter.z - dirLight.direction.z * sunDistance;
 
-    // Nastaven√≠ uniforms pro osv√¨tlen√≠
+    // NastavenÌ uniforms pro osvÏtlenÌ
     setupLightingUniforms();
 }
 
 GLuint App::textureInit(const std::filesystem::path& filepath) {
-    std::cout << "Na√®√≠t√°m texturu: " << filepath << std::endl;  // Debug v√Ωpis
-    // Pou≈æij std::filesystem::path spr√°vn√¨
+    std::cout << "NaËÌt·m texturu: " << filepath << std::endl;  // Debug v˝pis
+    // Pouûij std::filesystem::path spr·vnÏ
     std::string pathString = filepath.string();
     cv::Mat image = cv::imread(pathString, cv::IMREAD_UNCHANGED);
     if (image.empty()) {
-        throw std::runtime_error("Nelze na√®√≠st texturu ze souboru: " + pathString);
+        throw std::runtime_error("Nelze naËÌst texturu ze souboru: " + pathString);
     }
     return gen_tex(image);
 }
@@ -311,15 +311,15 @@ GLuint App::textureInit(const std::filesystem::path& filepath) {
 GLuint App::gen_tex(cv::Mat& image) {
     GLuint ID = 0;
 
-    // Generov√°n√≠ ID OpenGL textury
+    // Generov·nÌ ID OpenGL textury
     glCreateTextures(GL_TEXTURE_2D, 1, &ID);
 
-    // Nastaven√≠ podle po√®tu kan√°l√π v obr√°zku
+    // NastavenÌ podle poËtu kan·l˘ v obr·zku
     switch (image.channels()) {
     case 3:
-        // Vytvo√∏en√≠ a inicializace datov√©ho prostoru pro texturu - immutable form√°t
+        // Vytvo¯enÌ a inicializace datovÈho prostoru pro texturu - immutable form·t
         glTextureStorage2D(ID, 1, GL_RGB8, image.cols, image.rows);
-        // Nahr√°n√≠ dat do textury
+        // Nahr·nÌ dat do textury
         glTextureSubImage2D(ID, 0, 0, 0, image.cols, image.rows, GL_BGR, GL_UNSIGNED_BYTE, image.data);
         break;
     case 4:
@@ -327,15 +327,15 @@ GLuint App::gen_tex(cv::Mat& image) {
         glTextureSubImage2D(ID, 0, 0, 0, image.cols, image.rows, GL_BGRA, GL_UNSIGNED_BYTE, image.data);
         break;
     default:
-        throw std::runtime_error("Nepodporovan√Ω po√®et kan√°l√π v textu√∏e: " + std::to_string(image.channels()));
+        throw std::runtime_error("Nepodporovan˝ poËet kan·l˘ v textu¯e: " + std::to_string(image.channels()));
     }
 
-    // Nastaven√≠ filtrov√°n√≠ textury
-    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // biline√°rn√≠ zv√¨t≈°ov√°n√≠
-    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // triline√°rn√≠ zmen≈°ov√°n√≠
-    glGenerateTextureMipmap(ID);  // Generov√°n√≠ mipmap
+    // NastavenÌ filtrov·nÌ textury
+    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // biline·rnÌ zvÏtöov·nÌ
+    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // triline·rnÌ zmenöov·nÌ
+    glGenerateTextureMipmap(ID);  // Generov·nÌ mipmap
 
-    // Nastaven√≠ opakov√°n√≠ textury
+    // NastavenÌ opakov·nÌ textury
     glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(ID, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -415,21 +415,21 @@ void App::genLabyrinth(cv::Mat& map) {
     // set player position in 3D space (transform X-Y in map to XYZ in GL)
     camera.Position.x = (start_position.x) + 0.5f;
     camera.Position.z = (start_position.y) + 0.5f;
-    camera.Position.y = 0.5f; // V√Ω≈°ka o√®√≠
+    camera.Position.y = 0.5f; // V˝öka oËÌ
 }
 
 void App::createMazeModel() {
-    // Na√®ten√≠ atlasu textur
+    // NaËtenÌ atlasu textur
     cv::Mat atlas = cv::imread("resources/textures/tex_256.png", cv::IMREAD_UNCHANGED);
     if (atlas.empty()) {
-        throw std::runtime_error("Nelze na√®√≠st atlas textur!");
+        throw std::runtime_error("Nelze naËÌst atlas textur!");
     }
 
     // Atlas je 16x16 textur
-    const int texCount = 16; // Po√®et textur v ka≈æd√©m sm√¨ru
-    const int tileSize = atlas.cols / texCount; // Velikost jedn√© textury v pixelech
+    const int texCount = 16; // PoËet textur v kaûdÈm smÏru
+    const int tileSize = atlas.cols / texCount; // Velikost jednÈ textury v pixelech
 
-    // Ulo≈æen√≠ textur
+    // UloûenÌ textur
     auto saveTextureFromAtlas = [&](int row, int col, const std::string& filename) {
         int x = col * tileSize;
         int y = row * tileSize;
@@ -437,41 +437,41 @@ void App::createMazeModel() {
         cv::imwrite("resources/textures/" + filename, tileMat);
         };
 
-    // Ulo≈æen√≠ textur
+    // UloûenÌ textur
     saveTextureFromAtlas(1, 1, "floor.png"); // Podlaha
     saveTextureFromAtlas(3, 2, "wall.png");  // Zdi
 
-    // Na√®ten√≠ textur
+    // NaËtenÌ textur
     wall_textures.clear();
     GLuint floorTexture = textureInit("resources/textures/floor.png");
     GLuint wallTexture = textureInit("resources/textures/wall.png");
     wall_textures.push_back(floorTexture);
     wall_textures.push_back(wallTexture);
 
-    // Vytvo√∏en√≠ bludi≈°t√¨
+    // Vytvo¯enÌ bludiötÏ
     maze_map = cv::Mat(15, 15, CV_8U);
     genLabyrinth(maze_map);
 
-    // **Vytvo√∏en√≠ podlahy (15x15)**
+    // **Vytvo¯enÌ podlahy (15x15)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            // Pou≈æit√≠ lightingShader m√≠sto p√πvodn√≠ho shader
+            // PouûitÌ lightingShader mÌsto p˘vodnÌho shader
             Model* floor = new Model("resources/models/cube.obj", lightingShader);
             floor->meshes[0].texture_id = floorTexture;
-            floor->origin = glm::vec3(i, 0.0f, j); // Spodn√≠ vrstva
+            floor->origin = glm::vec3(i, 0.0f, j); // SpodnÌ vrstva
             floor->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             maze_walls.push_back(floor);
         }
     }
 
-    // **Vytvo√∏en√≠ zd√≠ (z `maze_map`)**
+    // **Vytvo¯enÌ zdÌ (z `maze_map`)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            if (getmap(maze_map, i, j) == '#') { // Pokud je tam ze√Ø
-                // Pou≈æit√≠ lightingShader m√≠sto p√πvodn√≠ho shader
+            if (getmap(maze_map, i, j) == '#') { // Pokud je tam zeÔ
+                // PouûitÌ lightingShader mÌsto p˘vodnÌho shader
                 Model* wall = new Model("resources/models/cube.obj", lightingShader);
                 wall->meshes[0].texture_id = wallTexture;
-                wall->origin = glm::vec3(i, 1.0f, j); // Um√≠st√¨n√≠ nad podlahu
+                wall->origin = glm::vec3(i, 1.0f, j); // UmÌstÏnÌ nad podlahu
                 wall->scale = glm::vec3(1.0f, 1.0f, 1.0f);
                 maze_walls.push_back(wall);
             }
@@ -485,7 +485,7 @@ bool App::run() {
         return false;
     }
 
-    // Ujist√≠me se, ≈æe FOV m√° spr√°vnou hodnotu
+    // UjistÌme se, ûe FOV m· spr·vnou hodnotu
     if (fov <= 0.0f) {
         fov = DEFAULT_FOV;
     }
@@ -493,25 +493,25 @@ bool App::run() {
     // Aktivace shader programu
     lightingShader.activate();
 
-    // Inicializace projek√®n√≠ a pohledov√© matice
+    // Inicializace projekËnÌ a pohledovÈ matice
     update_projection_matrix();
     lightingShader.setUniform("uV_m", camera.GetViewMatrix());
     lightingShader.setUniform("viewPos", camera.Position);
 
-    // Prom√¨nn√© pro m√¨√∏en√≠ FPS a deltaTime
+    // PromÏnnÈ pro mÏ¯enÌ FPS a deltaTime
     double lastTime = glfwGetTime();
     double lastFrameTime = lastTime;
     int frameCount = 0;
     std::string title = "OpenGL Maze Demo";
 
-    // Hlavn√≠ smy√®ka
+    // HlavnÌ smyËka
     while (!glfwWindowShouldClose(window)) {
-        // V√Ωpo√®et deltaTime
+        // V˝poËet deltaTime
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - lastFrameTime);
         lastFrameTime = currentTime;
 
-        // M√¨√∏en√≠ FPS
+        // MÏ¯enÌ FPS
         frameCount++;
         if (currentTime - lastTime >= 1.0) {
             std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount);
@@ -520,87 +520,87 @@ bool App::run() {
             lastTime = currentTime;
         }
 
-        // Zpracov√°n√≠ vstupu z kl√°vesnice pro pohyb kamery
+        // Zpracov·nÌ vstupu z kl·vesnice pro pohyb kamery
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
         camera.Move(direction);
 
-        // Aktualizace pohledov√© matice a pozice kamery
+        // Aktualizace pohledovÈ matice a pozice kamery
         lightingShader.activate();
         lightingShader.setUniform("uV_m", camera.GetViewMatrix());
         lightingShader.setUniform("viewPos", camera.Position);
 
-        // Aktualizace osv√¨tlen√≠
+        // Aktualizace osvÏtlenÌ
         updateLighting(deltaTime);
 
-        // Vy√®i≈°t√¨n√≠ obrazovky
+        // VyËiötÏnÌ obrazovky
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Implementace Painter's algoritmu pro transparentn√≠ objekty
+        // Implementace Painter's algoritmu pro transparentnÌ objekty
         std::vector<Model*> transparent_objects;
 
-        // 1. NEJPRVE VYKRESL√çME V≈†ECHNY NEPR√ôHLEDN√â OBJEKTY
-        // Vykreslen√≠ bludi≈°t√¨ (nepr√πhledn√© objekty)
+        // 1. NEJPRVE VYKRESLÕME VäECHNY NEPRŸHLEDN… OBJEKTY
+        // VykreslenÌ bludiötÏ (nepr˘hlednÈ objekty)
         for (auto& wall : maze_walls) {
-            // Nastaven√≠ model matice v shaderu
+            // NastavenÌ model matice v shaderu
             lightingShader.setUniform("uM_m", wall->getModelMatrix());
             lightingShader.setUniform("transparent", false);
-            // Vykreslen√≠ modelu
+            // VykreslenÌ modelu
             wall->draw();
         }
 
-        // 2. P√òIPRAV√çME SI SEZNAM TRANSPARENTN√çCH OBJEKT√ô
-        // P√∏id√°n√≠ transparentn√≠ch kr√°l√≠k√π do seznamu
+        // 2. PÿIPRAVÕME SI SEZNAM TRANSPARENTNÕCH OBJEKTŸ
+        // P¯id·nÌ transparentnÌch kr·lÌk˘ do seznamu
         for (auto& bunny : transparent_bunnies) {
             transparent_objects.push_back(bunny);
         }
 
-        // 3. SE√òAD√çME TRANSPARENTN√ç OBJEKTY OD NEJVZD√ÅLEN√åJ≈†√çHO K NEJBLI≈Ω≈†√çMU
+        // 3. SEÿADÕME TRANSPARENTNÕ OBJEKTY OD NEJVZD¡LENÃJäÕHO K NEJBLIéäÕMU
         std::sort(transparent_objects.begin(), transparent_objects.end(),
             [this](Model* a, Model* b) {
-                // Z√≠sk√°n√≠ pozice objekt√π
+                // ZÌsk·nÌ pozice objekt˘
                 glm::vec3 pos_a = a->origin;
                 glm::vec3 pos_b = b->origin;
 
-                // V√Ωpo√®et vzd√°lenosti od kamery
+                // V˝poËet vzd·lenosti od kamery
                 float dist_a = glm::distance(camera.Position, pos_a);
                 float dist_b = glm::distance(camera.Position, pos_b);
 
-                // √òazen√≠ od nejvzd√°len√¨j≈°√≠ho k nejbli≈æ≈°√≠mu (v√¨t≈°√≠ > men≈°√≠)
+                // ÿazenÌ od nejvzd·lenÏjöÌho k nejbliûöÌmu (vÏtöÌ > menöÌ)
                 return dist_a > dist_b;
             });
 
-        // 4. NASTAVEN√ç OPENGL PRO TRANSPARENTN√ç OBJEKTY
+        // 4. NASTAVENÕ OPENGL PRO TRANSPARENTNÕ OBJEKTY
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE); // Zak√°zat z√°pis do depth bufferu
+        glDepthMask(GL_FALSE); // Zak·zat z·pis do depth bufferu
 
-        // 5. VYKRESLEN√ç TRANSPARENTN√çCH OBJEKT√ô
+        // 5. VYKRESLENÕ TRANSPARENTNÕCH OBJEKTŸ
         for (auto* model : transparent_objects) {
-            // Nastaven√≠ model matice v shaderu
+            // NastavenÌ model matice v shaderu
             lightingShader.setUniform("uM_m", model->getModelMatrix());
-            // Nastaven√≠ diffuse materi√°lu (v√®etn√¨ alpha)
+            // NastavenÌ diffuse materi·lu (vËetnÏ alpha)
             lightingShader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
             lightingShader.setUniform("transparent", true);
-            // Vykreslen√≠ modelu
+            // VykreslenÌ modelu
             model->draw();
         }
 
-        // 6. OBNOVEN√ç P√ôVODN√çHO STAVU OPENGL
-        glDepthMask(GL_TRUE);  // Povolit z√°pis do depth bufferu
+        // 6. OBNOVENÕ PŸVODNÕHO STAVU OPENGL
+        glDepthMask(GL_TRUE);  // Povolit z·pis do depth bufferu
         glDisable(GL_BLEND);   // Vypnout blending
 
-        // 7. VYKRESLEN√ç SLUNCE (pou≈æ√≠v√°me p√πvodn√≠ shader, aby bylo jasn√¨ viditeln√©)
+        // 7. VYKRESLENÕ SLUNCE (pouûÌv·me p˘vodnÌ shader, aby bylo jasnÏ viditelnÈ)
         if (sunModel) {
             shader.activate();
             shader.setUniform("uP_m", projection_matrix);
             shader.setUniform("uV_m", camera.GetViewMatrix());
             shader.setUniform("uM_m", sunModel->getModelMatrix());
-            shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Jasn√¨ ≈ælut√° barva
+            shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // JasnÏ ûlut· barva
             sunModel->draw();
         }
 
-        // V√Ωm√¨na buffer√π a zpracov√°n√≠ ud√°lost√≠
+        // V˝mÏna buffer˘ a zpracov·nÌ ud·lostÌ
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -610,9 +610,9 @@ bool App::run() {
 
 void App::update_projection_matrix() {
     if (height < 1)
-        height = 1;   // Prevence d√¨len√≠ nulou
+        height = 1;   // Prevence dÏlenÌ nulou
 
-    // Kontrola, zda fov m√° platnou hodnotu
+    // Kontrola, zda fov m· platnou hodnotu
     if (fov <= 0.0f) {
         fov = DEFAULT_FOV;
     }
@@ -620,13 +620,13 @@ void App::update_projection_matrix() {
     float ratio = static_cast<float>(width) / height;
 
     projection_matrix = glm::perspective(
-        glm::radians(fov),   // Vertik√°ln√≠ zorn√© pole ve stupn√≠ch, p√∏evedeno na radi√°ny
-        ratio,               // Pom√¨r stran okna
+        glm::radians(fov),   // Vertik·lnÌ zornÈ pole ve stupnÌch, p¯evedeno na radi·ny
+        ratio,               // PomÏr stran okna
         0.1f,                // Near clipping plane
         20000.0f             // Far clipping plane
     );
 
-    // Nastaven√≠ uniform v shaderech
+    // NastavenÌ uniform v shaderech
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uP_m", projection_matrix);
@@ -643,17 +643,17 @@ void App::fbsize_callback(GLFWwindow* window, int width, int height) {
     app->width = width;
     app->height = height;
 
-    // Nastaven√≠ viewportu
+    // NastavenÌ viewportu
     glViewport(0, 0, width, height);
 
-    // Aktualizace projek√®n√≠ matice
+    // Aktualizace projekËnÌ matice
     app->update_projection_matrix();
 }
 
 void App::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
     app->fov += -5.0f * static_cast<float>(yoffset);  // Zoom in/out
-    app->fov = glm::clamp(app->fov, 20.0f, 170.0f);  // Omezen√≠ FOV na rozumn√© hodnoty
+    app->fov = glm::clamp(app->fov, 20.0f, 170.0f);  // OmezenÌ FOV na rozumnÈ hodnoty
     app->update_projection_matrix();
 }
 
@@ -679,7 +679,7 @@ void App::cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }
 
     double xoffset = xpos - app->lastX;
-    double yoffset = app->lastY - ypos; // P√∏evr√°ceno, proto≈æe y-sou√∏adnice jdou od shora dol√π
+    double yoffset = app->lastY - ypos; // P¯evr·ceno, protoûe y-sou¯adnice jdou od shora dol˘
 
     app->lastX = xpos;
     app->lastY = ypos;
@@ -691,7 +691,7 @@ void App::mouse_button_callback(GLFWwindow* window, int button, int action, int 
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
 
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
-        // Reset FOV na v√Ωchoz√≠ hodnotu
+        // Reset FOV na v˝chozÌ hodnotu
         app->fov = app->DEFAULT_FOV;
         app->update_projection_matrix();
         std::cout << "Zoom reset to default" << std::endl;
