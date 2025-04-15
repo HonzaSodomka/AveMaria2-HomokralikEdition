@@ -1,93 +1,76 @@
 ﻿#pragma once
-
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <filesystem>
+#include <glm/glm.hpp>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include <glm/glm.hpp>
+#include "assets.hpp"
 #include "ShaderProgram.hpp"
-#include "Camera.hpp"
 #include "Model.hpp"
-#include "Light.hpp"
-#include "ParticleSystem.hpp"
+#include "Camera.hpp"
+
+// Struktura pro smìrové svìtlo
+struct DirectionalLight {
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
 
 class App {
 public:
     App();
     ~App();
-
-    bool init(GLFWwindow* win);
-    bool run();
-
-private:
-    // Konstanty
-    const float DEFAULT_FOV = 70.0f;
-
-    // GLFW window
-    GLFWwindow* window = nullptr;
-    int width = 800, height = 600;
-
-    // Shader program
-    ShaderProgram shader;
-
-    // Model a kamera
-    Model* triangle = nullptr;
-    Camera camera;
-
-    // Světla
-    glm::vec3 pointLightPosition;  // Původní žluté světlo (pozice slunce)
-
-    // Nová světla (červené a modré)
-    PointLight redLight;           // Červené světlo
-    PointLight blueLight;          // Modré světlo
-    Model* redLightModel = nullptr;  // Model pro červené světlo
-    Model* blueLightModel = nullptr; // Model pro modré světlo
-
-    GLuint lampVAO = 0;
-    Model* sunModel = nullptr;
-
-    // Systém částic pro fontánu
-    ParticleSystem* fountain = nullptr;  // Přidaný systém částic
-    Model* particleModel = nullptr;      // Model používaný pro částice
-
-    // Čas pro aktualizaci částic
-    float lastFrameTime = 0.0f;
-
-    // Mapa a objekty
-    cv::Mat maze_map;
-    std::vector<Model*> maze_walls;
-    std::vector<Model*> transparent_bunnies;
-    std::vector<GLuint> wall_textures;
-
-    // Projekční matice
-    glm::mat4 projection_matrix = glm::mat4(1.0f);
-
-    // Proměnné pro pohyb kamery
-    float lastX, lastY;
-    bool firstMouse;
-    float fov;
-
-    // Inicializace a asset management
+    bool init(GLFWwindow* window);
     void init_assets();
-    void createMazeModel();
-    void createTransparentBunnies();
-    void createSunModel();
-    void createColoredLights();
-    void createFountain();  // Nová metoda pro vytvoření fontány
+    bool run();
+    // Naètení textury z obrázku pomocí OpenCV
     GLuint textureInit(const std::filesystem::path& filepath);
-    GLuint gen_tex(cv::Mat& image);
-    uchar getmap(cv::Mat& map, int x, int y);
-    void genLabyrinth(cv::Mat& map);
-    void update_projection_matrix();
-
-    // Callback funkce (statické, předávající volání instanci třídy)
+    // Callback metody
     static void fbsize_callback(GLFWwindow* window, int width, int height);
     static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
     static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+private:
+    ShaderProgram shader;
+    ShaderProgram lightingShader; // Nový shader pro osvìtlení
 
-    // Detekce kolizí
-    bool checkCollision(const glm::vec3& position, float radius = 0.3f);
+    Model* triangle{ nullptr };
+    // Bludištì
+    cv::Mat maze_map;
+    std::vector<Model*> maze_walls;
+    std::vector<GLuint> wall_textures;
+
+    // Transparentní králíci
+    std::vector<Model*> transparent_bunnies;
+    void createTransparentBunnies();
+
+    // Osvìtlení
+    DirectionalLight dirLight; // Smìrové svìtlo (slunce)
+    Model* sunModel{ nullptr }; // Model slunce
+    void initLighting();      // Inicializace osvìtlení
+    void updateLighting(float deltaTime); // Aktualizace parametrù osvìtlení v èase
+    void setupLightingUniforms(); // Nastavení uniforms pro osvìtlení
+    void createSunModel();    // Vytvoøení modelu slunce
+
+    // Metody pro práci s bludištìm
+    void genLabyrinth(cv::Mat& map);
+    uchar getmap(cv::Mat& map, int x, int y);
+    void createMazeModel();
+
+    GLFWwindow* window{ nullptr };
+    // Projekèní matice a související hodnoty
+    int width{ 800 }, height{ 600 };
+    float fov{ 60.0f };
+    const float DEFAULT_FOV = 60.0f;
+    glm::mat4 projection_matrix{ glm::identity<glm::mat4>() };
+    // Kamera
+    Camera camera{ glm::vec3(0.0f, 0.0f, 3.0f) };
+    double lastX{ 400.0 }, lastY{ 300.0 }; // Poslední pozice kurzoru
+    bool firstMouse{ true };             // Promìnná pro inicializaci pozice kurzoru
+    // Metoda pro aktualizaci projekèní matice
+    void update_projection_matrix();
+    // Pomocná metoda pro generování OpenGL textury z OpenCV obrázku
+    GLuint gen_tex(cv::Mat& image);
 };

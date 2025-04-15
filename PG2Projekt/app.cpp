@@ -17,39 +17,32 @@ App::App() :
     lastX(400.0),
     lastY(300.0),
     firstMouse(true),
-    fov(DEFAULT_FOV),
-    fountain(nullptr),
-    particleModel(nullptr)
+    fov(DEFAULT_FOV)
 {
-    // Pozice světla uprostřed mapy (15x15 / 2)
-    pointLightPosition = glm::vec3(7.5f, 2.0f, 7.5f);
     // Nastavení poèáteèní pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
+
+    // Inicializace smìrového svìtla
+    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // Smìr - dolù a dopøedu
+    dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient složka
+    dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse složka
+    dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular složka
 }
 
 App::~App() {
     // Úklid
     shader.clear();
+    lightingShader.clear();
+
     if (triangle) {
         delete triangle;
         triangle = nullptr;
     }
 
-    // Uvolnění modelu slunce
+    // Uvolnìní modelu slunce
     if (sunModel) {
         delete sunModel;
         sunModel = nullptr;
-    }
-
-    // Uvolnění modelů barevných světel
-    if (redLightModel) {
-        delete redLightModel;
-        redLightModel = nullptr;
-    }
-
-    if (blueLightModel) {
-        delete blueLightModel;
-        blueLightModel = nullptr;
     }
 
     // Uvolnìní modelù bludištì
@@ -63,19 +56,6 @@ App::~App() {
         delete bunny;
     }
     transparent_bunnies.clear();
-    glDeleteVertexArrays(1, &lampVAO);
-
-    // Uvolnění systému částic fontány
-    if (fountain) {
-        delete fountain;
-        fountain = nullptr;
-    }
-
-    // Uvolnění modelu částic
-    if (particleModel) {
-        delete particleModel;
-        particleModel = nullptr;
-    }
 }
 
 bool App::init(GLFWwindow* win) {
@@ -119,73 +99,20 @@ bool App::init(GLFWwindow* win) {
     // První aktualizace projekèní matice
     update_projection_matrix();
 
+    // Inicializace osvìtlení
+    initLighting();
+
     // Explicitní nastavení view matice
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uV_m", camera.GetViewMatrix());
     }
 
-    // Inicializace světla (malá kostka)
-    float lampVertices[] = {
-        // pozice (malá kostka)
-        -0.1f, -0.1f, -0.1f,
-         0.1f, -0.1f, -0.1f,
-         0.1f,  0.1f, -0.1f,
-         0.1f,  0.1f, -0.1f,
-        -0.1f,  0.1f, -0.1f,
-        -0.1f, -0.1f, -0.1f,
-
-        -0.1f, -0.1f,  0.1f,
-         0.1f, -0.1f,  0.1f,
-         0.1f,  0.1f,  0.1f,
-         0.1f,  0.1f,  0.1f,
-        -0.1f,  0.1f,  0.1f,
-        -0.1f, -0.1f,  0.1f,
-
-        -0.1f,  0.1f,  0.1f,
-        -0.1f,  0.1f, -0.1f,
-        -0.1f, -0.1f, -0.1f,
-        -0.1f, -0.1f, -0.1f,
-        -0.1f, -0.1f,  0.1f,
-        -0.1f,  0.1f,  0.1f,
-
-         0.1f,  0.1f,  0.1f,
-         0.1f,  0.1f, -0.1f,
-         0.1f, -0.1f, -0.1f,
-         0.1f, -0.1f, -0.1f,
-         0.1f, -0.1f,  0.1f,
-         0.1f,  0.1f,  0.1f,
-
-        -0.1f, -0.1f, -0.1f,
-         0.1f, -0.1f, -0.1f,
-         0.1f, -0.1f,  0.1f,
-         0.1f, -0.1f,  0.1f,
-        -0.1f, -0.1f,  0.1f,
-        -0.1f, -0.1f, -0.1f,
-
-        -0.1f,  0.1f, -0.1f,
-         0.1f,  0.1f, -0.1f,
-         0.1f,  0.1f,  0.1f,
-         0.1f,  0.1f,  0.1f,
-        -0.1f,  0.1f,  0.1f,
-        -0.1f,  0.1f, -0.1f
-    };
-
-    // Vytvoření VAO a VBO pro lampu
-    GLuint lampVBO;
-    glGenVertexArrays(1, &lampVAO);
-    glGenBuffers(1, &lampVBO);
-
-    glBindVertexArray(lampVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(lampVertices), lampVertices, GL_STATIC_DRAW);
-
-    // Nastavení atributů
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    if (lightingShader.getID() != 0) {
+        lightingShader.activate();
+        lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+        lightingShader.setUniform("viewPos", camera.Position);
+    }
 
     return true;
 }
@@ -195,6 +122,10 @@ void App::init_assets() {
     try {
         std::cout << "Loading shaders..." << std::endl;
         shader = ShaderProgram("resources/shaders/tex.vert", "resources/shaders/tex.frag");
+
+        // Naètení shaderù pro osvìtlení
+        lightingShader = ShaderProgram("resources/shaders/directional.vert", "resources/shaders/directional.frag");
+
         std::cout << "Shaders loaded successfully" << std::endl;
     }
     catch (const std::exception& e) {
@@ -224,38 +155,53 @@ void App::init_assets() {
         throw;
     }
 
-    // Nastavení pozice slunce/světla - jako poslední krok
+    // Vytvoøení modelu slunce
     try {
-        std::cout << "Setting up sun light..." << std::endl;
+        std::cout << "Creating sun model..." << std::endl;
         createSunModel();
-        std::cout << "Sun light set up successfully" << std::endl;
+        std::cout << "Sun model created successfully" << std::endl;
     }
     catch (const std::exception& e) {
-        std::cerr << "Sun light setup error: " << e.what() << std::endl;
+        std::cerr << "Sun model creation error: " << e.what() << std::endl;
         throw;
     }
+}
 
-    // Přidání barevných světel
-    try {
-        std::cout << "Creating colored lights..." << std::endl;
-        createColoredLights();
-        std::cout << "Colored lights created successfully" << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Colored lights creation error: " << e.what() << std::endl;
-        throw;
-    }
+// Nová metoda pro inicializaci osvìtlení
+void App::initLighting() {
+    // Nastavení light uniforms pro osvìtlení
+    lightingShader.activate();
 
-    // Vytvoření fontány
-    try {
-        std::cout << "Creating fountain..." << std::endl;
-        createFountain();
-        std::cout << "Fountain created successfully" << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Fountain creation error: " << e.what() << std::endl;
-        throw;
-    }
+    // Nastavení smìrového svìtla
+    lightingShader.setUniform("lightDir", dirLight.direction);
+    lightingShader.setUniform("lightAmbient", dirLight.ambient);
+    lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
+    lightingShader.setUniform("lightSpecular", dirLight.specular);
+
+    // Výchozí materiál
+    lightingShader.setUniform("ambientMaterial", glm::vec3(0.2f, 0.2f, 0.2f));
+    lightingShader.setUniform("diffuseMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
+    lightingShader.setUniform("specularMaterial", glm::vec3(1.0f, 1.0f, 1.0f));
+    lightingShader.setUniform("shininess", 32.0f);
+
+    // Deaktivace shaderu
+    lightingShader.deactivate();
+}
+
+
+void App::setupLightingUniforms() {
+    lightingShader.activate();
+
+    // Nastavení smìrového svìtla
+    lightingShader.setUniform("lightDir", dirLight.direction);
+    lightingShader.setUniform("lightAmbient", dirLight.ambient);
+    lightingShader.setUniform("lightDiffuse", dirLight.diffuse);
+    lightingShader.setUniform("lightSpecular", dirLight.specular);
+
+    // Nastavení pozice kamery pro spekulární výpoèty (v world space)
+    lightingShader.setUniform("viewPos", camera.Position);
+
+    lightingShader.deactivate();
 }
 
 void App::createTransparentBunnies() {
@@ -278,8 +224,8 @@ void App::createTransparentBunnies() {
 
     // Vytvoøení tøí transparentních králíkù
     for (int i = 0; i < 3; i++) {
-        // Vytvoøení modelu králíka
-        Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", shader);
+        // Vytvoøení modelu králíka - nyní použijeme lightingShader
+        Model* bunny = new Model("resources/models/bunny_tri_vnt.obj", lightingShader);
 
         // Nastavení textury a barvy s prùhledností
         bunny->meshes[0].texture_id = bunnyTexture;
@@ -287,7 +233,7 @@ void App::createTransparentBunnies() {
 
         // Nastavení pozice a velikosti
         bunny->origin = bunny_positions[i];
-        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f);
+        bunny->scale = glm::vec3(0.5f, 0.5f, 0.5f); // Zmenšíme králíky
 
         // Oznaèení jako transparentní objekt
         bunny->transparent = true;
@@ -297,8 +243,63 @@ void App::createTransparentBunnies() {
     }
 }
 
+// Metoda pro vytvoøení modelu slunce
+void App::createSunModel() {
+    // Vytvoøení modelu slunce (koule) - použijeme pùvodní shader bez osvìtlení, aby slunce vždy svítilo
+    sunModel = new Model("resources/models/sphere.obj", shader);
+
+    // Vytvoøení textury slunce (žlutá koule)
+    cv::Mat sunTexture(64, 64, CV_8UC3, cv::Scalar(255, 255, 0)); // Žlutá barva
+
+    // Uložení textury
+    cv::imwrite("resources/textures/sun.png", sunTexture);
+
+    // Naètení textury pro slunce
+    GLuint sunTextureID = textureInit("resources/textures/sun.png");
+
+    // Nastavení textury a materiálu
+    sunModel->meshes[0].texture_id = sunTextureID;
+    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0, 1.0f); // Žlutá barva
+
+    // Nastavení velikosti
+    sunModel->scale = glm::vec3(2.0f, 2.0f, 2.0f);
+
+    // Výchozí pozice slunce (bude aktualizována v updateLighting)
+    sunModel->origin = glm::vec3(0.0f, 30.0f, 0.0f);
+}
+
+void App::updateLighting(float deltaTime) {
+    // Pomalá rotace smìru svìtla pro simulaci pohybu slunce
+    static float angle = 0.0f;
+    angle += 0.1f * deltaTime; // Rychlost rotace
+
+    // Aktualizace smìru svìtla (v world space)
+    dirLight.direction.x = sin(angle);
+    dirLight.direction.y = -1.0f;
+    dirLight.direction.z = cos(angle);
+
+    // Normalizace smìru
+    dirLight.direction = glm::normalize(dirLight.direction);
+
+    // Pevný støed bludištì - nezávislý na kameøe
+    const glm::vec3 mazeCenter(7.5f, 0.0f, 7.5f); // Pro bludištì 15x15
+
+    // Aktualizace pozice modelu slunce (fixní trajektorie kolem støedu bludištì)
+    const float sunDistance = 50.0f;
+    const float sunHeight = 20.0f;
+
+    // Umístìní slunce kolem støedu bludištì
+    sunModel->origin.x = mazeCenter.x - dirLight.direction.x * sunDistance;
+    sunModel->origin.y = sunHeight;
+    sunModel->origin.z = mazeCenter.z - dirLight.direction.z * sunDistance;
+
+    // Nastavení uniforms pro osvìtlení
+    setupLightingUniforms();
+}
+
 GLuint App::textureInit(const std::filesystem::path& filepath) {
-    std::cout << "Naèítám texturu: " << filepath << std::endl;
+    std::cout << "Naèítám texturu: " << filepath << std::endl;  // Debug výpis
+    // Použij std::filesystem::path správnì
     std::string pathString = filepath.string();
     cv::Mat image = cv::imread(pathString, cv::IMREAD_UNCHANGED);
     if (image.empty()) {
@@ -330,9 +331,9 @@ GLuint App::gen_tex(cv::Mat& image) {
     }
 
     // Nastavení filtrování textury
-    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glGenerateTextureMipmap(ID);
+    glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // bilineární zvìtšování
+    glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // trilineární zmenšování
+    glGenerateTextureMipmap(ID);  // Generování mipmap
 
     // Nastavení opakování textury
     glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -353,11 +354,11 @@ void App::genLabyrinth(cv::Mat& map) {
     cv::Point2i start_position, end_position;
 
     // C++ random numbers
-    std::random_device r;
+    std::random_device r; // Seed with a real random value, if available
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<int> uniform_height(1, map.rows - 2);
+    std::uniform_int_distribution<int> uniform_height(1, map.rows - 2); // uniform distribution between int..int
     std::uniform_int_distribution<int> uniform_width(1, map.cols - 2);
-    std::uniform_int_distribution<int> uniform_block(0, 15);
+    std::uniform_int_distribution<int> uniform_block(0, 15); // how often are walls generated: 0=wall, anything else=empty
 
     // inner maze 
     for (int j = 0; j < map.rows; j++) {
@@ -388,13 +389,13 @@ void App::genLabyrinth(cv::Mat& map) {
     do {
         start_position.x = uniform_width(e1);
         start_position.y = uniform_height(e1);
-    } while (getmap(map, start_position.x, start_position.y) == '#');
+    } while (getmap(map, start_position.x, start_position.y) == '#'); // check wall
 
     // gen end different from start, inside maze (excluding outer walls) 
     do {
         end_position.x = uniform_width(e1);
         end_position.y = uniform_height(e1);
-    } while (start_position == end_position || getmap(map, end_position.x, end_position.y) == '#');
+    } while (start_position == end_position || getmap(map, end_position.x, end_position.y) == '#'); // check overlap and wall
     map.at<uchar>(cv::Point(end_position.x, end_position.y)) = 'e';
 
     std::cout << "Start: " << start_position << std::endl;
@@ -412,9 +413,9 @@ void App::genLabyrinth(cv::Mat& map) {
     }
 
     // set player position in 3D space (transform X-Y in map to XYZ in GL)
-    camera.Position.x = (start_position.x) + 1.0f;
-    camera.Position.z = (start_position.y) + 1.0f;
-    camera.Position.y = 2.5f;
+    camera.Position.x = (start_position.x) + 0.5f;
+    camera.Position.z = (start_position.y) + 0.5f;
+    camera.Position.y = 0.5f; // Výška oèí
 }
 
 void App::createMazeModel() {
@@ -425,8 +426,8 @@ void App::createMazeModel() {
     }
 
     // Atlas je 16x16 textur
-    const int texCount = 16;
-    const int tileSize = atlas.cols / texCount;
+    const int texCount = 16; // Poèet textur v každém smìru
+    const int tileSize = atlas.cols / texCount; // Velikost jedné textury v pixelech
 
     // Uložení textur
     auto saveTextureFromAtlas = [&](int row, int col, const std::string& filename) {
@@ -437,8 +438,8 @@ void App::createMazeModel() {
         };
 
     // Uložení textur
-    saveTextureFromAtlas(1, 1, "floor.png");
-    saveTextureFromAtlas(3, 2, "wall.png");
+    saveTextureFromAtlas(1, 1, "floor.png"); // Podlaha
+    saveTextureFromAtlas(3, 2, "wall.png");  // Zdi
 
     // Naètení textur
     wall_textures.clear();
@@ -454,9 +455,10 @@ void App::createMazeModel() {
     // **Vytvoøení podlahy (15x15)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            Model* floor = new Model("resources/models/cube.obj", shader);
+            // Použití lightingShader místo pùvodního shader
+            Model* floor = new Model("resources/models/cube.obj", lightingShader);
             floor->meshes[0].texture_id = floorTexture;
-            floor->origin = glm::vec3(i, 0.0f, j);
+            floor->origin = glm::vec3(i, 0.0f, j); // Spodní vrstva
             floor->scale = glm::vec3(1.0f, 1.0f, 1.0f);
             maze_walls.push_back(floor);
         }
@@ -465,10 +467,11 @@ void App::createMazeModel() {
     // **Vytvoøení zdí (z `maze_map`)**
     for (int j = 0; j < 15; j++) {
         for (int i = 0; i < 15; i++) {
-            if (getmap(maze_map, i, j) == '#') {
-                Model* wall = new Model("resources/models/cube.obj", shader);
+            if (getmap(maze_map, i, j) == '#') { // Pokud je tam zeï
+                // Použití lightingShader místo pùvodního shader
+                Model* wall = new Model("resources/models/cube.obj", lightingShader);
                 wall->meshes[0].texture_id = wallTexture;
-                wall->origin = glm::vec3(i, 1.0f, j);
+                wall->origin = glm::vec3(i, 1.0f, j); // Umístìní nad podlahu
                 wall->scale = glm::vec3(1.0f, 1.0f, 1.0f);
                 maze_walls.push_back(wall);
             }
@@ -488,41 +491,12 @@ bool App::run() {
     }
 
     // Aktivace shader programu
-    shader.activate();
-
-    // Vypíšeme pozici světla pro debugging
-    std::cout << "Light position: "
-        << pointLightPosition[0] << ", "
-        << pointLightPosition[1] << ", "
-        << pointLightPosition[2] << std::endl;
-
-    // Nastavení světel
-    // Původní světlo (nyní jako index 0)
-    PointLight mainLight(
-        pointLightPosition,           // stejná pozice jako dřív
-        glm::vec3(1.0f, 1.0f, 0.0f),  // žlutá barva
-        1.0f, 0.09f, 0.032f           // parametry útlumu
-    );
-    // Hlavní světlo (žluté)
-    mainLight.SetPosition(pointLightPosition); // aktualizace pozice hlavního světla
-    mainLight.SetUniforms(shader, 0);
-
-    // Červené a modré světlo (statické, neměnné)
-    redLightModel->origin = redLight.GetPosition();
-    blueLightModel->origin = blueLight.GetPosition();
-
-    // Červené světlo (nyní jako index 1)
-    redLight.SetUniforms(shader, 1);
-
-    // Modré světlo (nyní jako index 2)
-    blueLight.SetUniforms(shader, 2);
-
-    // Nastavení pozice kamery pro výpočet spekulárních odlesků
-    shader.setUniform("viewPos", camera.Position);
+    lightingShader.activate();
 
     // Inicializace projekèní a pohledové matice
     update_projection_matrix();
-    shader.setUniform("uV_m", camera.GetViewMatrix());
+    lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+    lightingShader.setUniform("viewPos", camera.Position);
 
     // Promìnné pro mìøení FPS a deltaTime
     double lastTime = glfwGetTime();
@@ -537,28 +511,6 @@ bool App::run() {
         float deltaTime = static_cast<float>(currentTime - lastFrameTime);
         lastFrameTime = currentTime;
 
-        shader.activate();
-
-        // Aktualizace světel v každém snímku
-        // Hlavní světlo (žluté)
-        mainLight.SetPosition(pointLightPosition); // aktualizace pozice hlavního světla
-        mainLight.SetUniforms(shader, 0);
-
-        // Červené a modré světlo (statické, neměnné)
-        redLight.SetUniforms(shader, 1);
-        blueLight.SetUniforms(shader, 2);
-
-        // Aktualizace pozice kamery pro výpočet odlesků
-        shader.setUniform("viewPos", camera.Position);
-
-        // Získání aktuálních pozic světel
-        glm::vec3 currentRedLightPos = redLight.GetPosition();
-        glm::vec3 currentBlueLightPos = blueLight.GetPosition();
-
-        // Explicitní aktualizace pozic modelů světel
-        redLightModel->origin = currentRedLightPos;
-        blueLightModel->origin = currentBlueLightPos;
-
         // Mìøení FPS
         frameCount++;
         if (currentTime - lastTime >= 1.0) {
@@ -570,80 +522,38 @@ bool App::run() {
 
         // Zpracování vstupu z klávesnice pro pohyb kamery
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
+        camera.Move(direction);
 
-        // Vypočtení nové pozice
-        glm::vec3 newPosition = camera.Position + direction;
+        // Aktualizace pohledové matice a pozice kamery
+        lightingShader.activate();
+        lightingShader.setUniform("uV_m", camera.GetViewMatrix());
+        lightingShader.setUniform("viewPos", camera.Position);
 
-        // Kontrola kolize před provedením pohybu
-        if (!checkCollision(newPosition)) {
-            camera.Move(direction);
-        }
-        else {
-            // Zkusíme pohyb po jednotlivých osách
-            glm::vec3 xMove = camera.Position + glm::vec3(direction.x, 0.0f, 0.0f);
-            glm::vec3 yMove = camera.Position + glm::vec3(0.0f, direction.y, 0.0f);
-            glm::vec3 zMove = camera.Position + glm::vec3(0.0f, 0.0f, direction.z);
-
-            // Pokud je pohyb platný alespoň v jednom směru
-            if (!checkCollision(xMove)) {
-                camera.Move(glm::vec3(direction.x, 0.0f, 0.0f));
-            }
-            if (!checkCollision(yMove)) {
-                camera.Move(glm::vec3(0.0f, direction.y, 0.0f));
-            }
-            if (!checkCollision(zMove)) {
-                camera.Move(glm::vec3(0.0f, 0.0f, direction.z));
-            }
-        }
-
-        // Aktualizace pohledové matice
-        shader.setUniform("uV_m", camera.GetViewMatrix());
-
-        // Aktualizace systému částic fontány
-        if (fountain) {
-            fountain->Update(deltaTime);
-        }
+        // Aktualizace osvìtlení
+        updateLighting(deltaTime);
 
         // Vyèištìní obrazovky
-        glClearColor(0.2f, 0.2f, 0.3f, 1.0f); // Tmavě modrá obloha
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Implementace Painter's algoritmu pro transparentní objekty
         std::vector<Model*> transparent_objects;
 
         // 1. NEJPRVE VYKRESLÍME VŠECHNY NEPRÙHLEDNÉ OBJEKTY
-
         // Vykreslení bludištì (neprùhledné objekty)
         for (auto& wall : maze_walls) {
             // Nastavení model matice v shaderu
-            shader.setUniform("uM_m", wall->getModelMatrix());
+            lightingShader.setUniform("uM_m", wall->getModelMatrix());
+            lightingShader.setUniform("transparent", false);
             // Vykreslení modelu
             wall->draw();
         }
 
-        // Vykreslení slunce
-        if (sunModel) {
-            // Zajistit, že pozice modelu slunce přesně odpovídá pozici světla
-            sunModel->origin = pointLightPosition;
-
-            // Nastavení model matice pro slunce
-            shader.setUniform("uM_m", sunModel->getModelMatrix());
-            // Nastavení barvy slunce (jasná žlutá)
-            shader.setUniform("u_diffuse_color", sunModel->meshes[0].diffuse_material);
-            // Vykreslení modelu slunce
-            sunModel->draw();
-        }
-
         // 2. PØIPRAVÍME SI SEZNAM TRANSPARENTNÍCH OBJEKTÙ
-
         // Pøidání transparentních králíkù do seznamu
         for (auto& bunny : transparent_bunnies) {
             transparent_objects.push_back(bunny);
         }
-
-        // Přidání modelů barevných světel do seznamu transparentních objektů
-        transparent_objects.push_back(redLightModel);
-        transparent_objects.push_back(blueLightModel);
 
         // 3. SEØADÍME TRANSPARENTNÍ OBJEKTY OD NEJVZDÁLENÌJŠÍHO K NEJBLIŽŠÍMU
         std::sort(transparent_objects.begin(), transparent_objects.end(),
@@ -668,21 +578,27 @@ bool App::run() {
         // 5. VYKRESLENÍ TRANSPARENTNÍCH OBJEKTÙ
         for (auto* model : transparent_objects) {
             // Nastavení model matice v shaderu
-            shader.setUniform("uM_m", model->getModelMatrix());
+            lightingShader.setUniform("uM_m", model->getModelMatrix());
             // Nastavení diffuse materiálu (vèetnì alpha)
-            shader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
+            lightingShader.setUniform("u_diffuse_color", model->meshes[0].diffuse_material);
+            lightingShader.setUniform("transparent", true);
             // Vykreslení modelu
             model->draw();
-        }
-
-        // Vykreslení fontány
-        if (fountain) {
-            fountain->Draw();
         }
 
         // 6. OBNOVENÍ PÙVODNÍHO STAVU OPENGL
         glDepthMask(GL_TRUE);  // Povolit zápis do depth bufferu
         glDisable(GL_BLEND);   // Vypnout blending
+
+        // 7. VYKRESLENÍ SLUNCE (používáme pùvodní shader, aby bylo jasnì viditelné)
+        if (sunModel) {
+            shader.activate();
+            shader.setUniform("uP_m", projection_matrix);
+            shader.setUniform("uV_m", camera.GetViewMatrix());
+            shader.setUniform("uM_m", sunModel->getModelMatrix());
+            shader.setUniform("u_diffuse_color", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f)); // Jasnì žlutá barva
+            sunModel->draw();
+        }
 
         // Výmìna bufferù a zpracování událostí
         glfwSwapBuffers(window);
@@ -710,10 +626,15 @@ void App::update_projection_matrix() {
         20000.0f             // Far clipping plane
     );
 
-    // Nastavení uniform v shaderu
+    // Nastavení uniform v shaderech
     if (shader.getID() != 0) {
         shader.activate();
         shader.setUniform("uP_m", projection_matrix);
+    }
+
+    if (lightingShader.getID() != 0) {
+        lightingShader.activate();
+        lightingShader.setUniform("uP_m", projection_matrix);
     }
 }
 
@@ -744,55 +665,6 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             break;
-
-            // Ovládání pozice světla pomocí šipek
-        case GLFW_KEY_UP:
-            app->pointLightPosition.y += 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
-
-        case GLFW_KEY_DOWN:
-            app->pointLightPosition.y -= 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
-
-        case GLFW_KEY_LEFT:
-            app->pointLightPosition.x -= 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
-
-        case GLFW_KEY_RIGHT:
-            app->pointLightPosition.x += 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
-
-        case GLFW_KEY_PAGE_UP:
-            app->pointLightPosition.z -= 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
-
-        case GLFW_KEY_PAGE_DOWN:
-            app->pointLightPosition.z += 0.1f;
-            // Aktualizace pozice objektu slunce
-            if (app->sunModel) {
-                app->sunModel->origin = app->pointLightPosition;
-            }
-            break;
         }
     }
 }
@@ -807,7 +679,7 @@ void App::cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }
 
     double xoffset = xpos - app->lastX;
-    double yoffset = app->lastY - ypos;
+    double yoffset = app->lastY - ypos; // Pøevráceno, protože y-souøadnice jdou od shora dolù
 
     app->lastX = xpos;
     app->lastY = ypos;
@@ -824,146 +696,4 @@ void App::mouse_button_callback(GLFWwindow* window, int button, int action, int 
         app->update_projection_matrix();
         std::cout << "Zoom reset to default" << std::endl;
     }
-}
-
-void App::createSunModel() {
-    // Nastavení pozice světla nad středem mapy
-    pointLightPosition = glm::vec3(7.5f, 8.0f, 7.5f);
-
-    // Vytvoření viditelného objektu reprezentujícího slunce
-    sunModel = new Model("resources/models/cube.obj", shader);
-
-    // Nastavení jasně žluté barvy pro slunce
-    sunModel->meshes[0].diffuse_material = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-
-    // Nastavení PŘESNĚ STEJNÉ pozice jako má světlo
-    sunModel->origin = pointLightPosition;
-    sunModel->scale = glm::vec3(0.5f);
-
-    std::cout << "Inicializace slunce - pozice světla: ("
-        << pointLightPosition.x << ", "
-        << pointLightPosition.y << ", "
-        << pointLightPosition.z << ")" << std::endl;
-}
-
-// Metoda pro vytvoření barevných světel s explicitním nastavením pozic
-void App::createColoredLights() {
-    // Explicitně definované pozice světel
-    glm::vec3 redLightPos = glm::vec3(1.0f, 4.0f, 1.0f);
-    glm::vec3 blueLightPos = glm::vec3(13.0f, 4.0f, 13.0f);
-
-    // Barvy světel
-    glm::vec3 redLightColor = glm::vec3(1.0f, 0.2f, 0.2f);
-    glm::vec3 blueLightColor = glm::vec3(0.2f, 0.2f, 1.0f);
-
-    // Inicializace červeného světla
-    redLight = PointLight(
-        redLightPos,         // pozice
-        redLightColor,       // barva (červená)
-        1.0f,                // konstanta útlumu
-        0.09f,               // lineární útlum
-        0.032f               // kvadratický útlum
-    );
-
-    // Vytvoření modelu pro červené světlo
-    redLightModel = new Model("resources/models/cube.obj", shader);
-    // Nastavení PŘESNĚ STEJNÉ pozice jako světlo
-    redLightModel->origin = redLightPos;  // Použití stejné proměnné pro obě pozice
-    redLightModel->scale = glm::vec3(0.4f);
-    redLightModel->meshes[0].diffuse_material = glm::vec4(redLightColor, 0.5f);
-    redLightModel->transparent = true;
-
-    // Inicializace modrého světla
-    blueLight = PointLight(
-        blueLightPos,        // pozice
-        blueLightColor,      // barva (modrá)
-        1.0f,                // konstanta útlumu
-        0.09f,               // lineární útlum
-        0.032f               // kvadratický útlum
-    );
-
-    // Vytvoření modelu pro modré světlo
-    blueLightModel = new Model("resources/models/cube.obj", shader);
-    // Nastavení PŘESNĚ STEJNÉ pozice jako světlo
-    blueLightModel->origin = blueLightPos;  // Použití stejné proměnné pro obě pozice
-    blueLightModel->scale = glm::vec3(0.4f);
-    blueLightModel->meshes[0].diffuse_material = glm::vec4(blueLightColor, 0.5f);
-    blueLightModel->transparent = true;
-
-    // Výpis pozic do konzole pro debugging
-    std::cout << "Červené světlo - PointLight pozice: ("
-        << redLight.GetPosition().x << ", " << redLight.GetPosition().y << ", " << redLight.GetPosition().z
-        << "), Model pozice: ("
-        << redLightModel->origin.x << ", " << redLightModel->origin.y << ", " << redLightModel->origin.z << ")" << std::endl;
-
-    std::cout << "Modré světlo - PointLight pozice: ("
-        << blueLight.GetPosition().x << ", " << blueLight.GetPosition().y << ", " << blueLight.GetPosition().z
-        << "), Model pozice: ("
-        << blueLightModel->origin.x << ", " << blueLightModel->origin.y << ", " << blueLightModel->origin.z << ")" << std::endl;
-}
-
-void App::createFountain() {
-    // Vytvoření modelu pro částice (použijeme jednoduchou kostku)
-    particleModel = new Model("resources/models/cube.obj", shader);
-
-    // Umístění fontány do středu bludiště
-    glm::vec3 fountainPosition = glm::vec3(7.5f, 0.1f, 7.5f);
-
-    // Vytvoření systému částic pro fontánu
-    fountain = new ParticleSystem(particleModel, shader, fountainPosition, 0.3f);
-
-    std::cout << "Fountain initialized at position (" <<
-        fountainPosition.x << ", " <<
-        fountainPosition.y << ", " <<
-        fountainPosition.z << ")" << std::endl;
-}
-
-bool App::checkCollision(const glm::vec3& position, float radius) {
-    // Kontrola kolize s podlahou - použití přesné Y souřadnice
-    if (position.y < 0.3f + radius) { // 0.1f je jistá tolerance nad podlahou
-        return true; // Kolize s podlahou
-    }
-
-    // Kontrola kolize se zdmi v bludišti
-    for (auto& wall : maze_walls) {
-        // Zkontroluj jen stěny (ne podlahu)
-        if (wall->origin.y > 0.5f) {
-            // Jednoduchá AABB kolize (axis-aligned bounding box)
-            // Získání hranic kostky zdi
-            glm::vec3 wallMin = wall->origin - wall->scale * 0.5f;
-            glm::vec3 wallMax = wall->origin + wall->scale * 0.5f;
-
-            // Rozšíření hranic o poloměr hráče
-            wallMin -= glm::vec3(radius);
-            wallMax += glm::vec3(radius);
-
-            // Kontrola kolize
-            if (position.x >= wallMin.x && position.x <= wallMax.x &&
-                position.y >= wallMin.y && position.y <= wallMax.y &&
-                position.z >= wallMin.z && position.z <= wallMax.z) {
-                return true; // Kolize se zdí
-            }
-        }
-    }
-
-    // Kontrola kolize s králíky
-    for (auto& bunny : transparent_bunnies) {
-        // Získání hranic králíka - použijeme zmenšený box, protože model králíka není přesná kostka
-        float bunnyScale = std::max(bunny->scale.x, std::max(bunny->scale.y, bunny->scale.z));
-        glm::vec3 bunnyMin = bunny->origin - glm::vec3(bunnyScale * 0.4f); // Zmenšený box
-        glm::vec3 bunnyMax = bunny->origin + glm::vec3(bunnyScale * 0.4f);
-
-        // Rozšíření hranic o poloměr hráče
-        bunnyMin -= glm::vec3(radius);
-        bunnyMax += glm::vec3(radius);
-
-        // Kontrola kolize
-        if (position.x >= bunnyMin.x && position.x <= bunnyMax.x &&
-            position.y >= bunnyMin.y && position.y <= bunnyMax.y &&
-            position.z >= bunnyMin.z && position.z <= bunnyMax.z) {
-            return true; // Kolize s králíkem
-        }
-    }
-
-    return false; // Žádná kolize
 }
