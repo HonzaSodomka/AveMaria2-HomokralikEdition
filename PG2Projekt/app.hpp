@@ -35,6 +35,8 @@ public:
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
     void createFountain();
+    // Metoda pro detekci kolizí
+    bool checkCollision(const glm::vec3& position, float radius = 0.3f);
 
 private:
     ShaderProgram shader;

@@ -426,9 +426,9 @@ void App::genLabyrinth(cv::Mat& map) {
     }
 
     // set player position in 3D space (transform X-Y in map to XYZ in GL)
-    camera.Position.x = (start_position.x) + 0.5f;
-    camera.Position.z = (start_position.y) + 0.5f;
-    camera.Position.y = 0.5f; // Výška oèí
+    camera.Position.x = (start_position.x) + 1.0f;
+     camera.Position.z = (start_position.y) + 1.0f;
+     camera.Position.y = 2.5f;
 }
 
 void App::createMazeModel() {
@@ -506,6 +506,8 @@ bool App::run() {
     // Aktivace shader programu
     lightingShader.activate();
 
+
+
     // Inicializace projekèní a pohledové matice
     update_projection_matrix();
     lightingShader.setUniform("uV_m", camera.GetViewMatrix());
@@ -534,8 +536,31 @@ bool App::run() {
         }
 
         // Zpracování vstupu z klávesnice pro pohyb kamery
+        // Zpracování vstupu z klávesnice pro pohyb kamery
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
-        camera.Move(direction);
+
+        // Kontrola kolize před provedením pohybu
+        glm::vec3 newPosition = camera.Position + direction;
+        if (!checkCollision(newPosition)) {
+            camera.Move(direction);
+        }
+        else {
+            // Zkusíme pohyb po jednotlivých osách
+            glm::vec3 xMove = camera.Position + glm::vec3(direction.x, 0.0f, 0.0f);
+            glm::vec3 yMove = camera.Position + glm::vec3(0.0f, direction.y, 0.0f);
+            glm::vec3 zMove = camera.Position + glm::vec3(0.0f, 0.0f, direction.z);
+
+            // Pokud je pohyb platný alespoň v jednom směru
+            if (!checkCollision(xMove)) {
+                camera.Move(glm::vec3(direction.x, 0.0f, 0.0f));
+            }
+            if (!checkCollision(yMove)) {
+                camera.Move(glm::vec3(0.0f, direction.y, 0.0f));
+            }
+            if (!checkCollision(zMove)) {
+                camera.Move(glm::vec3(0.0f, 0.0f, direction.z));
+            }
+        }
 
         // Aktualizace pohledové matice a pozice kamery
         lightingShader.activate();
@@ -738,4 +763,54 @@ void App::createFountain() {
         fountainPosition.x << ", " <<
         fountainPosition.y << ", " <<
         fountainPosition.z << ")" << std::endl;
+}
+
+bool App::checkCollision(const glm::vec3& position, float radius) {
+    // Kontrola kolize s podlahou - použití přesné Y souřadnice
+    if (position.y < 0.3f + radius) { // 0.1f je jistá tolerance nad podlahou
+        return true; // Kolize s podlahou
+    }
+
+    // Kontrola kolize se zdmi v bludišti
+    for (auto& wall : maze_walls) {
+        // Zkontroluj jen stěny (ne podlahu)
+        if (wall->origin.y > 0.5f) {
+            // Jednoduchá AABB kolize (axis-aligned bounding box)
+            // Získání hranic kostky zdi
+            glm::vec3 wallMin = wall->origin - wall->scale * 0.5f;
+            glm::vec3 wallMax = wall->origin + wall->scale * 0.5f;
+
+            // Rozšíření hranic o poloměr hráče
+            wallMin -= glm::vec3(radius);
+            wallMax += glm::vec3(radius);
+
+            // Kontrola kolize
+            if (position.x >= wallMin.x && position.x <= wallMax.x &&
+                position.y >= wallMin.y && position.y <= wallMax.y &&
+                position.z >= wallMin.z && position.z <= wallMax.z) {
+                return true; // Kolize se zdí
+            }
+        }
+    }
+
+    // Kontrola kolize s králíky
+    for (auto& bunny : transparent_bunnies) {
+        // Získání hranic králíka - použijeme zmenšený box, protože model králíka není přesná kostka
+        float bunnyScale = std::max(bunny->scale.x, std::max(bunny->scale.y, bunny->scale.z));
+        glm::vec3 bunnyMin = bunny->origin - glm::vec3(bunnyScale * 0.4f); // Zmenšený box
+        glm::vec3 bunnyMax = bunny->origin + glm::vec3(bunnyScale * 0.4f);
+
+        // Rozšíření hranic o poloměr hráče
+        bunnyMin -= glm::vec3(radius);
+        bunnyMax += glm::vec3(radius);
+
+        // Kontrola kolize
+        if (position.x >= bunnyMin.x && position.x <= bunnyMax.x &&
+            position.y >= bunnyMin.y && position.y <= bunnyMax.y &&
+            position.z >= bunnyMin.z && position.z <= bunnyMax.z) {
+            return true; // Kolize s králíkem
+        }
+    }
+
+    return false; // Žádná kolize
 }
