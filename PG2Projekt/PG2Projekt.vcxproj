@@ -139,6 +139,7 @@
     <ClCompile Include="app.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OBJloader.cpp" />
+    <ClCompile Include="ParticleSystem.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -148,6 +149,7 @@
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="Model.hpp" />
     <ClInclude Include="OBJloader.hpp" />
+    <ClInclude Include="ParticleSystem.hpp" />
     <ClInclude Include="ShaderProgram.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

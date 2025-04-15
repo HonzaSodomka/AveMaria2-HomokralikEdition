@@ -250,7 +250,7 @@ void ParticleSystem::Draw() {
                         shader.setUniform("uM_m", model);
 
                         // Nastavení průhlednosti
-                        glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, fragment.alpha); // Červená barva pro fragmenty
+                        glm::vec4 color = glm::vec4(0.8f, 0.2f, 0.2f, fragment.alpha); // Červená barva pro fragmenty
                         shader.setUniform("u_diffuse_color", color);
 
                         // Vykreslení modelu částice
