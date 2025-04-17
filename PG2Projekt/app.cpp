@@ -12,18 +12,25 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "app.hpp"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 App::App() :
     lastX(400.0),
     lastY(300.0),
     firstMouse(true),
-    fov(DEFAULT_FOV)
+    fov(DEFAULT_FOV),
+    isFullscreen(false),
+    windowedX(100),
+    windowedY(100),
+    windowedWidth(800),
+    windowedHeight(600)
 {
-    // Nastavení poèáteèní pozice kamery
+    // Nastavení počáteční pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
 
-    // Inicializace smìrového svìtla
-    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // Smìr - dolù a dopøedu
+    // Inicializace směrového světla
+    dirLight.direction = glm::vec3(0.0f, -1.0f, -1.0f); // Směr - dolů a dopředu
     dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient složka
     dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse složka
     dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular složka
@@ -76,14 +83,14 @@ bool App::init(GLFWwindow* win) {
     fov = DEFAULT_FOV;
 
     if (!GLEW_ARB_direct_state_access) {
-        std::cerr << "No DSA :-(" << std::endl;
+        std::cerr << "Nepodporován DSA :-(" << std::endl;
         return false;
     }
 
-    // Nastavení ukazatele na tøídu App pro callbacky
+    // Nastavení ukazatele na třídu App pro callbacky
     glfwSetWindowUserPointer(window, this);
 
-    // Nastavení callbackù
+    // Nastavení callbacků
     glfwSetFramebufferSizeCallback(window, fbsize_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
@@ -93,10 +100,10 @@ bool App::init(GLFWwindow* win) {
     // Zakázání zobrazení kurzoru a jeho omezení na okno
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Povolení Z-bufferu pro správné vykreslování 3D modelù
+    // Povolení Z-bufferu pro správné vykreslování 3D modelů
     glEnable(GL_DEPTH_TEST);
 
-    // Nastavení pro prùhlednost
+    // Nastavení pro průhlednost
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -104,13 +111,22 @@ bool App::init(GLFWwindow* win) {
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
-    // Naètení assets
+    // Aktualizace windowedWidth a windowedHeight, pokud nejsme v celoobrazovkovém režimu
+    if (!isFullscreen) {
+        windowedWidth = width;
+        windowedHeight = height;
+
+        // Získání pozice okna
+        glfwGetWindowPos(window, &windowedX, &windowedY);
+    }
+
+    // Načtení assets
     init_assets();
 
-    // První aktualizace projekèní matice
+    // První aktualizace projekční matice
     update_projection_matrix();
 
-    // Inicializace osvìtlení
+    // Inicializace osvětlení
     initLighting();
 
     // Explicitní nastavení view matice
@@ -492,6 +508,108 @@ void App::createMazeModel() {
     }
 }
 
+// Implementace metody pro přepínání mezi celoobrazovkovým a okenním režimem
+void App::toggleFullscreen() {
+    if (!window) {
+        std::cerr << "Žádné aktivní GLFW okno!" << std::endl;
+        return;
+    }
+
+    if (isFullscreen) {
+        // Přepnutí z celoobrazovkového do okenního režimu
+        glfwSetWindowMonitor(window, nullptr, windowedX, windowedY,
+            windowedWidth, windowedHeight, GLFW_DONT_CARE);
+
+        // Obnovíme nastavení viewportu a projekční matice
+        glViewport(0, 0, windowedWidth, windowedHeight);
+        width = windowedWidth;
+        height = windowedHeight;
+
+        isFullscreen = false;
+        std::cout << "Přepnuto do okenního režimu: " << windowedWidth << "x" << windowedHeight
+            << " na pozici (" << windowedX << "," << windowedY << ")" << std::endl;
+    }
+    else {
+        // Nejprve uložíme aktuální pozici a velikost okna
+        glfwGetWindowPos(window, &windowedX, &windowedY);
+        glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
+
+        // Získání monitoru, na kterém je okno
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        if (!monitor) {
+            std::cerr << "Nepodařilo se získat primární monitor!" << std::endl;
+            return;
+        }
+
+        // Získání video režimu monitoru
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        if (!mode) {
+            std::cerr << "Nepodařilo se získat režim videa!" << std::endl;
+            return;
+        }
+
+        // Přepnutí z okenního do celoobrazovkového režimu
+        glfwSetWindowMonitor(window, monitor, 0, 0,
+            mode->width, mode->height, mode->refreshRate);
+
+        // Aktualizace nastavení viewportu a projekční matice
+        glViewport(0, 0, mode->width, mode->height);
+        width = mode->width;
+        height = mode->height;
+
+        isFullscreen = true;
+        std::cout << "Přepnuto do celoobrazovkového režimu: " << mode->width << "x" << mode->height
+            << " s obnovovací frekvencí " << mode->refreshRate << " Hz" << std::endl;
+    }
+
+    // Aktualizace projekční matice
+    update_projection_matrix();
+
+    // Uložení aktuální konfigurace
+    saveWindowConfig();
+}
+
+// Implementace metody pro uložení konfigurace okna do JSON souboru
+void App::saveWindowConfig() {
+    // Použijeme nlohmann::json pro práci s JSON
+    nlohmann::json config;
+
+    // Načtení existující konfigurace, pokud existuje
+    std::ifstream inFile("config.json");
+    if (inFile.is_open()) {
+        try {
+            inFile >> config;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Chyba při načítání konfigurace: " << e.what() << std::endl;
+            // Vytvoříme novou konfiguraci, pokud došlo k chybě
+            config = nlohmann::json::object();
+        }
+        inFile.close();
+    }
+
+    // Aktualizace konfigurace
+    config["window"]["isFullscreen"] = isFullscreen;
+    if (!isFullscreen) {
+        config["window"]["x"] = windowedX;
+        config["window"]["y"] = windowedY;
+        config["window"]["width"] = windowedWidth;
+        config["window"]["height"] = windowedHeight;
+    }
+
+    // Uložení konfigurace do souboru
+    std::ofstream outFile("config.json");
+    if (outFile.is_open()) {
+        outFile << config.dump(4); // Formátování s odsazením 4 mezer
+        outFile.close();
+        std::cout << "Konfigurace okna uložena" << std::endl;
+    }
+    else {
+        std::cerr << "Nepodařilo se uložit konfiguraci okna" << std::endl;
+    }
+}
+
+
 bool App::run() {
     if (!window) {
         std::cerr << "No active GLFW window!" << std::endl;
@@ -715,6 +833,10 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
         switch (key) {
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, GLFW_TRUE);
+            break;
+        case GLFW_KEY_F11:
+            // Přepnutí mezi celoobrazovkovým a okenním režimem pomocí klávesy F11
+            app->toggleFullscreen();
             break;
         }
     }

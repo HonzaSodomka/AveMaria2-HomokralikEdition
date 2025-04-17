@@ -30,12 +30,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // ÚKOL 2: Implementace naèítání a validace antialiasingu
 
 // Funkce pro vytvoøení výchozí konfigurace
+// Funkce pro vytvoøení výchozí konfigurace
 void create_default_config() {
     json config;
     config["window"] = {
         {"width", 800},
         {"height", 600},
-        {"title", "OpenGL Maze Demo"}
+        {"title", "OpenGL Maze Demo"},
+        {"x", 100},                // Výchozí pozice X
+        {"y", 100},                // Výchozí pozice Y
+        {"isFullscreen", false}    // Výchozí režim je okenní
     };
 
     // Pøidání konfigurace pro antialiasing
@@ -75,7 +79,10 @@ json load_config() {
         default_config["window"] = {
             {"width", 800},
             {"height", 600},
-            {"title", "OpenGL Maze Demo"}
+            {"title", "OpenGL Maze Demo"},
+            {"x", 100},                // Výchozí pozice X
+            {"y", 100},                // Výchozí pozice Y
+            {"isFullscreen", false}    // Výchozí režim je okenní
         };
         default_config["graphics"] = {
             {"antialiasing", {
@@ -127,14 +134,19 @@ int main() {
     try {
         // Inicializace GLFW
         if (!glfwInit()) {
-            throw std::runtime_error("Failed to initialize GLFW");
+            throw std::runtime_error("Nepodaøilo se inicializovat GLFW");
         }
 
-        // ÚKOL 2: Naètení konfigurace a nastavení antialiasingu
+        // Naètení konfigurace
         json config = load_config();
         int width = config["window"]["width"];
         int height = config["window"]["height"];
         std::string title = config["window"]["title"];
+
+        // Naètení pozice okna, pokud je k dispozici
+        int windowX = config["window"].value("x", 100);
+        int windowY = config["window"].value("y", 100);
+        bool isFullscreen = config["window"].value("isFullscreen", false);
 
         // Validace a nastavení antialiasingu
         bool antialiasing_enabled;
@@ -157,10 +169,40 @@ int main() {
         }
 
         // Vytvoøení okna
-        GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+        GLFWwindow* window = nullptr;
+        GLFWmonitor* monitor = nullptr;
+
+        if (isFullscreen) {
+            // Vytvoøení celoobrazovkového okna
+            monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+            if (mode) {
+                width = mode->width;
+                height = mode->height;
+                window = glfwCreateWindow(width, height, title.c_str(), monitor, NULL);
+                std::cout << "Vytváøím celoobrazovkové okno: " << width << "x" << height << std::endl;
+            }
+            else {
+                std::cerr << "Nepodaøilo se získat režim videa, použiji okenní režim." << std::endl;
+                isFullscreen = false;
+            }
+        }
+
+        if (!isFullscreen) {
+            // Vytvoøení okna v okenním režimu
+            window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+            if (window) {
+                // Nastavení pozice okna
+                glfwSetWindowPos(window, windowX, windowY);
+                std::cout << "Vytváøím okno: " << width << "x" << height
+                    << " na pozici (" << windowX << ", " << windowY << ")" << std::endl;
+            }
+        }
+
         if (!window) {
             glfwTerminate();
-            throw std::runtime_error("Failed to create GLFW window");
+            throw std::runtime_error("Nepodaøilo se vytvoøit GLFW okno");
         }
 
         // Aktivace OpenGL kontextu
@@ -174,7 +216,7 @@ int main() {
         GLenum err = glewInit();
         if (err != GLEW_OK) {
             glfwTerminate();
-            throw std::runtime_error(std::string("Failed to initialize GLEW: ") +
+            throw std::runtime_error(std::string("Nepodaøilo se inicializovat GLEW: ") +
                 (const char*)glewGetErrorString(err));
         }
 
@@ -187,9 +229,16 @@ int main() {
         }
 
         // Inicializace aplikace
-        if (!myApp.init(window)) {
-            glfwTerminate();
-            throw std::runtime_error("Failed to initialize application");
+        myApp.init(window);
+
+        // Nastavení informace o celoobrazovkovém režimu do aplikace
+        if (isFullscreen) {
+            // Simulujeme pøepnutí do celoobrazovkového režimu, abychom nastavili správné hodnoty
+            myApp.toggleFullscreen();
+        }
+        else {
+            // Uložení poèáteèní konfigurace okenního režimu
+            myApp.saveWindowConfig();
         }
 
         // Spuštìní hlavní smyèky
@@ -200,7 +249,7 @@ int main() {
         return 0;
     }
     catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Chyba: " << e.what() << std::endl;
         glfwTerminate();
         return -1;
     }

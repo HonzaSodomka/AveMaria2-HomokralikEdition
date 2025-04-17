@@ -1,13 +1,16 @@
 {
-  "window": {
-    "width": 800,
-    "height": 600,
-    "title": "OpenGL Maze Demo s průhlednými králíky"
-  },
-  "graphics": {
-    "antialiasing": {
-      "enabled": true,
-      "samples": 4
+    "graphics": {
+        "antialiasing": {
+            "enabled": true,
+            "samples": 4
+        }
+    },
+    "window": {
+        "height": 600,
+        "isFullscreen": true,
+        "title": "OpenGL Maze Demo s průhlednými králíky",
+        "width": 800,
+        "x": 100,
+        "y": 100
     }
-  }
 }

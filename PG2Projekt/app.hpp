@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -10,7 +10,7 @@
 #include "Camera.hpp"
 #include "ParticleSystem.hpp"
 
-// Struktura pro smìrové svìtlo
+// Struktura pro smÄ›rovÃ© svÄ›tlo
 struct DirectionalLight {
     glm::vec3 direction;
     glm::vec3 ambient;
@@ -25,7 +25,7 @@ public:
     bool init(GLFWwindow* window);
     void init_assets();
     bool run();
-    // Naètení textury z obrázku pomocí OpenCV
+    // NaÄtenÃ­ textury z obrÃ¡zku pomocÃ­ OpenCV
     GLuint textureInit(const std::filesystem::path& filepath);
     // Callback metody
     static void fbsize_callback(GLFWwindow* window, int width, int height);
@@ -35,51 +35,64 @@ public:
     static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 
     void createFountain();
-    // Metoda pro detekci kolizí
+    // Metoda pro detekci kolizÃ­
     bool checkCollision(const glm::vec3& position, float radius = 0.3f);
+
+    // NovÃ¡ metoda pro pÅ™epÃ­nÃ¡nÃ­ celoobrazovkovÃ©ho/okennÃ­ho reÅ¾imu
+    void toggleFullscreen();
+
+    // Metoda pro uloÅ¾enÃ­ konfigurace (pozice a velikost okna)
+    void saveWindowConfig();
 
 private:
     ShaderProgram shader;
-    ShaderProgram lightingShader; // Novı shader pro osvìtlení
+    ShaderProgram lightingShader; // NovÃ½ shader pro osvÄ›tlenÃ­
 
     Model* triangle{ nullptr };
-    // Bludištì
+    // BludiÅ¡tÄ›
     cv::Mat maze_map;
     std::vector<Model*> maze_walls;
     std::vector<GLuint> wall_textures;
 
-    // Transparentní králíci
+    // TransparentnÃ­ krÃ¡lÃ­ci
     std::vector<Model*> transparent_bunnies;
     void createTransparentBunnies();
 
-    // Osvìtlení
-    DirectionalLight dirLight; // Smìrové svìtlo (slunce)
+    // OsvÄ›tlenÃ­
+    DirectionalLight dirLight; // SmÄ›rovÃ© svÄ›tlo (slunce)
     Model* sunModel{ nullptr }; // Model slunce
-    void initLighting();      // Inicializace osvìtlení
-    void updateLighting(float deltaTime); // Aktualizace parametrù osvìtlení v èase
-    void setupLightingUniforms(); // Nastavení uniforms pro osvìtlení
-    void createSunModel();    // Vytvoøení modelu slunce
+    void initLighting();      // Inicializace osvÄ›tlenÃ­
+    void updateLighting(float deltaTime); // Aktualizace parametrÅ¯ osvÄ›tlenÃ­ v Äase
+    void setupLightingUniforms(); // NastavenÃ­ uniforms pro osvÄ›tlenÃ­
+    void createSunModel();    // VytvoÅ™enÃ­ modelu slunce
 
-    // Metody pro práci s bludištìm
+    // Metody pro prÃ¡ci s bludiÅ¡tÄ›m
     void genLabyrinth(cv::Mat& map);
     uchar getmap(cv::Mat& map, int x, int y);
     void createMazeModel();
 
     GLFWwindow* window{ nullptr };
-    // Projekèní matice a související hodnoty
+    // ProjekÄnÃ­ matice a souvisejÃ­cÃ­ hodnoty
     int width{ 800 }, height{ 600 };
     float fov{ 60.0f };
     const float DEFAULT_FOV = 60.0f;
     glm::mat4 projection_matrix{ glm::identity<glm::mat4>() };
     // Kamera
     Camera camera{ glm::vec3(0.0f, 0.0f, 3.0f) };
-    double lastX{ 400.0 }, lastY{ 300.0 }; // Poslední pozice kurzoru
-    bool firstMouse{ true };             // Promìnná pro inicializaci pozice kurzoru
-    // Metoda pro aktualizaci projekèní matice
+    double lastX{ 400.0 }, lastY{ 300.0 }; // PoslednÃ­ pozice kurzoru
+    bool firstMouse{ true };             // PromÄ›nnÃ¡ pro inicializaci pozice kurzoru
+    // Metoda pro aktualizaci projekÄnÃ­ matice
     void update_projection_matrix();
-    // Pomocná metoda pro generování OpenGL textury z OpenCV obrázku
+    // PomocnÃ¡ metoda pro generovÃ¡nÃ­ OpenGL textury z OpenCV obrÃ¡zku
     GLuint gen_tex(cv::Mat& image);
 
     Model* particleModel;
     ParticleSystem* fountain;
+
+    // PromÄ›nnÃ© pro sprÃ¡vu celoobrazovkovÃ©ho reÅ¾imu
+    bool isFullscreen{ false };
+    int windowedX{ 100 };     // Pozice okna X pÅ™ed pÅ™epnutÃ­m do celoobrazovkovÃ©ho reÅ¾imu
+    int windowedY{ 100 };     // Pozice okna Y pÅ™ed pÅ™epnutÃ­m do celoobrazovkovÃ©ho reÅ¾imu
+    int windowedWidth{ 800 }; // Å Ã­Å™ka okna pÅ™ed pÅ™epnutÃ­m do celoobrazovkovÃ©ho reÅ¾imu
+    int windowedHeight{ 600 }; // VÃ½Å¡ka okna pÅ™ed pÅ™epnutÃ­m do celoobrazovkovÃ©ho reÅ¾imu
 };
