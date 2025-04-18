@@ -141,6 +141,7 @@
     <ClCompile Include="OBJloader.cpp" />
     <ClCompile Include="ParticleSystem.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
+    <ClCompile Include="TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.hpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="OBJloader.hpp" />
     <ClInclude Include="ParticleSystem.hpp" />
     <ClInclude Include="ShaderProgram.hpp" />
+    <ClInclude Include="TextRenderer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

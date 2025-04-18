@@ -9,6 +9,7 @@
 #include "Model.hpp"
 #include "Camera.hpp"
 #include "ParticleSystem.hpp"
+#include "TextRenderer.hpp" // Přidáno: Include pro TextRenderer
 
 // Struktura pro směrové světlo
 struct DirectionalLight {
@@ -43,6 +44,9 @@ public:
 
     // Metoda pro uložení konfigurace (pozice a velikost okna)
     void saveWindowConfig();
+
+    // Přidáno: Metoda pro zobrazení FPS
+    void renderFPS(int fps);
 
 private:
     ShaderProgram shader;
@@ -95,4 +99,9 @@ private:
     int windowedY{ 100 };     // Pozice okna Y před přepnutím do celoobrazovkového režimu
     int windowedWidth{ 800 }; // Šířka okna před přepnutím do celoobrazovkového režimu
     int windowedHeight{ 600 }; // Výška okna před přepnutím do celoobrazovkového režimu
+
+    // Přidáno: Objekt pro vykreslování textu
+    TextRenderer textRenderer;
+    // Přidáno: Proměnná pro zobrazování FPS
+    bool showFPS{ true };
 };

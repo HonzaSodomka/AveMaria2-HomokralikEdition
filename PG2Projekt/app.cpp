@@ -143,6 +143,11 @@ bool App::init(GLFWwindow* win) {
 
     createFountain();
 
+    if (!textRenderer.init(width, height)) {
+        std::cerr << "Chyba při inicializaci text rendereru" << std::endl;
+        return false;
+    }
+
     return true;
 }
 
@@ -635,6 +640,7 @@ bool App::run() {
     double lastTime = glfwGetTime();
     double lastFrameTime = lastTime;
     int frameCount = 0;
+    int currentFPS = 0;
     std::string title = "OpenGL Maze Demo";
 
     // Hlavní smyèka
@@ -647,13 +653,18 @@ bool App::run() {
         // Mìøení FPS
         frameCount++;
         if (currentTime - lastTime >= 1.0) {
-            std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount);
-            glfwSetWindowTitle(window, fpsTitle.c_str());
+            currentFPS = frameCount; // Uložit aktuální hodnotu FPS
+
+            // Aktualizace titulku okna (pro okenní režim)
+            if (!isFullscreen) {
+                std::string fpsTitle = title + " | FPS: " + std::to_string(frameCount);
+                glfwSetWindowTitle(window, fpsTitle.c_str());
+            }
+
             frameCount = 0;
             lastTime = currentTime;
         }
 
-        // Zpracování vstupu z klávesnice pro pohyb kamery
         // Zpracování vstupu z klávesnice pro pohyb kamery
         glm::vec3 direction = camera.ProcessKeyboard(window, deltaTime);
 
@@ -769,6 +780,9 @@ bool App::run() {
             fountain->Draw();
         }
 
+        // Vykreslení FPS hodnoty na obrazovku
+        renderFPS(currentFPS);
+
         // Výmìna bufferù a zpracování událostí
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -817,6 +831,9 @@ void App::fbsize_callback(GLFWwindow* window, int width, int height) {
 
     // Aktualizace projekèní matice
     app->update_projection_matrix();
+
+    // Aktualizace velikosti okna pro textový renderer
+    app->textRenderer.updateScreenSize(width, height);
 }
 
 void App::scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
@@ -837,6 +854,10 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
         case GLFW_KEY_F11:
             // Přepnutí mezi celoobrazovkovým a okenním režimem pomocí klávesy F11
             app->toggleFullscreen();
+            break;
+        case GLFW_KEY_F:
+            // Přepínání zobrazení FPS klávesou F
+            app->showFPS = !app->showFPS;
             break;
         }
     }
@@ -935,4 +956,31 @@ bool App::checkCollision(const glm::vec3& position, float radius) {
     }
 
     return false; // Žádná kolize
+}
+
+void App::renderFPS(int fps) {
+    if (!showFPS)
+        return;
+
+    // Formátování textu FPS
+    std::string fpsText = "FPS: " + std::to_string(fps);
+
+    // Zobrazení FPS v pravém horním rohu obrazovky
+    float x = width - 150.0f;  // 150 pixelů od pravého okraje
+    float y = height - 50.0f;  // 50 pixelů od horního okraje
+
+    float scale = 0.5f;
+    glm::vec3 color;
+
+    // Barva podle hodnoty FPS
+    if (fps < 30)
+        color = glm::vec3(1.0f, 0.0f, 0.0f); // červená
+    else if (fps < 60)
+        color = glm::vec3(1.0f, 1.0f, 0.0f); // žlutá
+    else
+        color = glm::vec3(0.0f, 1.0f, 0.0f); // zelená
+
+    // Stín pro lepší čitelnost
+    textRenderer.renderText(fpsText, x + 2.0f, y - 2.0f, scale, glm::vec3(0.0f, 0.0f, 0.0f));
+    textRenderer.renderText(fpsText, x, y, scale, color);
 }

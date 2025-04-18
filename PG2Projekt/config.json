@@ -6,11 +6,11 @@
         }
     },
     "window": {
-        "height": 600,
-        "isFullscreen": true,
+        "height": 1080,
+        "isFullscreen": false,
         "title": "OpenGL Maze Demo s průhlednými králíky",
-        "width": 800,
-        "x": 100,
-        "y": 100
+        "width": 1920,
+        "x": 0,
+        "y": 0
     }
 }
