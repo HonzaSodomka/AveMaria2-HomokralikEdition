@@ -24,7 +24,10 @@ App::App() :
     windowedX(100),
     windowedY(100),
     windowedWidth(800),
-    windowedHeight(600)
+    windowedHeight(600),
+    showMenu(false),
+    selectedMenuItem(0),
+    vsyncEnabled(true)
 {
     // Nastavení počáteční pozice kamery
     camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
@@ -89,6 +92,9 @@ bool App::init(GLFWwindow* win) {
 
     // Nastavení ukazatele na třídu App pro callbacky
     glfwSetWindowUserPointer(window, this);
+
+    // Nastavení VSync podle aktuální konfigurace
+    glfwSwapInterval(vsyncEnabled ? 1 : 0);
 
     // Nastavení callbacků
     glfwSetFramebufferSizeCallback(window, fbsize_callback);
@@ -522,6 +528,17 @@ void App::toggleFullscreen() {
 
     if (isFullscreen) {
         // Přepnutí z celoobrazovkového do okenního režimu
+
+        // Menší velikost okna při návratu z celoobrazovkového režimu
+        windowedWidth = 1280;
+        windowedHeight = 720;
+
+        // Centrování okna na obrazovku
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        windowedX = (mode->width - windowedWidth) / 2;
+        windowedY = (mode->height - windowedHeight) / 2;
+
         glfwSetWindowMonitor(window, nullptr, windowedX, windowedY,
             windowedWidth, windowedHeight, GLFW_DONT_CARE);
 
@@ -569,6 +586,9 @@ void App::toggleFullscreen() {
 
     // Aktualizace projekční matice
     update_projection_matrix();
+
+    // Aktualizace text rendereru pro novou velikost okna
+    textRenderer.updateScreenSize(width, height);
 
     // Uložení aktuální konfigurace
     saveWindowConfig();
@@ -780,6 +800,9 @@ bool App::run() {
             fountain->Draw();
         }
 
+        // Vykreslení menu, pokud je aktivní
+        renderMenu();
+
         // Vykreslení FPS hodnoty na obrazovku
         renderFPS(currentFPS);
 
@@ -847,18 +870,43 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        switch (key) {
-        case GLFW_KEY_ESCAPE:
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-            break;
-        case GLFW_KEY_F11:
-            // Přepnutí mezi celoobrazovkovým a okenním režimem pomocí klávesy F11
-            app->toggleFullscreen();
-            break;
-        case GLFW_KEY_F:
-            // Přepínání zobrazení FPS klávesou F
-            app->showFPS = !app->showFPS;
-            break;
+        // Pokud je menu aktivní, zpracováváme navigaci v menu
+        if (app->showMenu) {
+            switch (key) {
+            case GLFW_KEY_UP:
+                app->selectedMenuItem = (app->selectedMenuItem - 1 + app->menuItems.size()) % app->menuItems.size();
+                break;
+            case GLFW_KEY_DOWN:
+                app->selectedMenuItem = (app->selectedMenuItem + 1) % app->menuItems.size();
+                break;
+            case GLFW_KEY_ENTER:
+            case GLFW_KEY_SPACE:
+                app->handleMenuSelection();
+                break;
+            case GLFW_KEY_ESCAPE:
+                app->toggleMenu(); // Zavřít menu
+                break;
+            }
+        }
+        else {
+            // Běžné funkce v herním režimu
+            switch (key) {
+            case GLFW_KEY_ESCAPE:
+                app->toggleMenu(); // Otevřít menu místo ukončení hry
+                break;
+            case GLFW_KEY_F11:
+                // Přepnutí mezi celoobrazovkovým a okenním režimem pomocí klávesy F11
+                app->toggleFullscreen();
+                break;
+            case GLFW_KEY_F:
+                // Přepínání zobrazení FPS klávesou F
+                app->showFPS = !app->showFPS;
+                break;
+            case GLFW_KEY_V:
+                // Přepínání VSync klávesou V
+                app->toggleVsync();
+                break;
+            }
         }
     }
 }
@@ -983,4 +1031,128 @@ void App::renderFPS(int fps) {
     // Stín pro lepší čitelnost
     textRenderer.renderText(fpsText, x + 2.0f, y - 2.0f, scale, glm::vec3(0.0f, 0.0f, 0.0f));
     textRenderer.renderText(fpsText, x, y, scale, color);
+}
+
+// Metoda pro přepnutí zobrazení menu
+void App::toggleMenu() {
+    showMenu = !showMenu;
+
+    // Pokud zobrazujeme menu, zakážeme pohyb kamery pomocí myši
+    if (showMenu) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+    else {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+}
+
+// Metoda pro vykreslení menu
+void App::renderMenu() {
+    if (!showMenu) return;
+
+    // Poloprůhledné pozadí menu
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Aktualizace textů položek menu podle aktuálního stavu
+    std::vector<std::string> currentMenuItems = menuItems;
+    currentMenuItems[1] = "Show FPS: " + std::string(showFPS ? "ON" : "OFF");
+    currentMenuItems[2] = "VSync: " + std::string(vsyncEnabled ? "ON" : "OFF");
+    currentMenuItems[3] = "Full screen: " + std::string(isFullscreen ? "ON" : "OFF");
+
+    // Nastavení rozměrů menu
+    float menuWidth = 300.0f;
+    float menuHeight = 350.0f;
+    float menuX = (width - menuWidth) / 2.0f;
+    float menuY = (height - menuHeight) / 2.0f;
+
+    // Vykreslení pozadí menu (černý poloprůhledný obdélník)
+    glDisable(GL_DEPTH_TEST);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0.0, width, 0.0, height, -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glBegin(GL_QUADS);
+    glColor4f(0.0f, 0.0f, 0.0f, 0.7f);
+    glVertex2f(menuX, menuY);
+    glVertex2f(menuX + menuWidth, menuY);
+    glVertex2f(menuX + menuWidth, menuY + menuHeight);
+    glVertex2f(menuX, menuY + menuHeight);
+    glEnd();
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_DEPTH_TEST);
+
+    // Vykreslení textu menu
+    float titleScale = 2.0f;
+    float itemScale = 2.0f;
+
+    // Přesné umístění titulku
+    float titleY = menuY + menuHeight - 60.0f;
+
+    // Lepší rozestupy mezi položkami (zvětšené)
+    float itemStartY = titleY - 70.0f;
+    float itemSpacing = 50.0f; // Zvětšený rozestup mezi položkami
+
+    // Titulek menu - přesně vycentrovaný
+    float titleWidth = 4.0f * 40.0f; // Přibližná šířka textu "MENU" při scale 2.0
+    float titleX = menuX + (menuWidth - titleWidth) / 2.0f;
+    textRenderer.renderText("MENU", titleX, titleY, titleScale, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    // Položky menu
+    for (int i = 0; i < currentMenuItems.size(); i++) {
+        glm::vec3 color;
+
+        // Zvýraznění vybrané položky
+        if (i == selectedMenuItem) {
+            color = glm::vec3(1.0f, 0.8f, 0.0f); // Žlutá pro vybranou položku
+        }
+        else {
+            color = glm::vec3(0.8f, 0.8f, 0.8f); // Světle šedá pro ostatní položky
+        }
+
+        // Vykreslení položky - posunutá více do středu
+        textRenderer.renderText(currentMenuItems[i],
+            menuX + 50.0f,
+            itemStartY - i * itemSpacing,
+            itemScale,
+            color);
+    }
+
+    glDisable(GL_BLEND);
+}
+
+// Metoda pro zpracování výběru položky menu
+void App::handleMenuSelection() {
+    // Zjištění aktuálně vybrané položky
+    switch (selectedMenuItem) {
+    case 0: // Pokračovat
+        toggleMenu();
+        break;
+    case 1: // Zobrazit FPS
+        showFPS = !showFPS;
+        break;
+    case 2: // VSync
+        toggleVsync();
+        break;
+    case 3: // Celá obrazovka
+        toggleFullscreen();
+        break;
+    case 4: // Ukončit hru
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+        break;
+    }
+}
+
+// Metoda pro přepnutí VSync
+void App::toggleVsync() {
+    vsyncEnabled = !vsyncEnabled;
+    glfwSwapInterval(vsyncEnabled ? 1 : 0);
 }

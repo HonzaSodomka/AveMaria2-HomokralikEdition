@@ -104,4 +104,21 @@ private:
     TextRenderer textRenderer;
     // Přidáno: Proměnná pro zobrazování FPS
     bool showFPS{ true };
+
+    bool showMenu{ false };             // Je menu zobrazeno?
+    int selectedMenuItem{ 0 };          // Aktuálně vybraná položka v menu
+    bool vsyncEnabled{ true };          // Je VSync zapnutý?
+    const std::vector<std::string> menuItems{
+        "Continue",
+        "Show FPS: ON",
+        "VSync: ON",
+        "Full screen: OFF",
+        "Exit"
+    };
+
+    // Přidáno: Metody pro práci s menu
+    void toggleMenu();                     // Přepnutí zobrazení menu
+    void renderMenu();                     // Vykreslení menu
+    void handleMenuSelection();            // Zpracování výběru položky menu
+    void toggleVsync();                    // Přepnutí VSync
 };
