@@ -948,6 +948,11 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
 void App::cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
     App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
 
+    // Pokud je menu otevřené, neupravujeme kameru
+    if (app->showMenu) {
+        return;
+    }
+
     if (app->firstMouse) {
         app->lastX = xpos;
         app->lastY = ypos;
@@ -955,7 +960,7 @@ void App::cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     }
 
     double xoffset = xpos - app->lastX;
-    double yoffset = app->lastY - ypos; // Pøevráceno, protože y-souøadnice jdou od shora dolù
+    double yoffset = app->lastY - ypos;
 
     app->lastX = xpos;
     app->lastY = ypos;
@@ -1071,11 +1076,17 @@ void App::renderFPS(int fps) {
 void App::toggleMenu() {
     showMenu = !showMenu;
 
-    // Pokud zobrazujeme menu, zakážeme pohyb kamery pomocí myši
     if (showMenu) {
+        // Když zobrazujeme menu, uložíme aktuální pozici myši
+        glfwGetCursorPos(window, &lastX, &lastY);
+        // Povolíme zobrazení kurzoru
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
     else {
+        // Když zavíráme menu
+        // Nastavíme firstMouse na true, aby se při příštím pohybu neskočilo
+        firstMouse = true;
+        // Znovu zakážeme kurzor
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 }
