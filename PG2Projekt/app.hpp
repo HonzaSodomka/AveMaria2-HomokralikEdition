@@ -9,7 +9,8 @@
 #include "Model.hpp"
 #include "Camera.hpp"
 #include "ParticleSystem.hpp"
-#include "TextRenderer.hpp" // Přidáno: Include pro TextRenderer
+#include "TextRenderer.hpp"
+#include "SpotLight.hpp" // Přidaný include pro SpotLight
 
 // Struktura pro směrové světlo
 struct DirectionalLight {
@@ -64,11 +65,14 @@ private:
 
     // Osvětlení
     DirectionalLight dirLight; // Směrové světlo (slunce)
+    SpotLight spotLight;       // Čelová baterka (nové)
+    bool spotLightEnabled;     // Stav čelové baterky (nové)
     Model* sunModel{ nullptr }; // Model slunce
     void initLighting();      // Inicializace osvětlení
     void updateLighting(float deltaTime); // Aktualizace parametrů osvětlení v čase
     void setupLightingUniforms(); // Nastavení uniforms pro osvětlení
     void createSunModel();    // Vytvoření modelu slunce
+    void toggleSpotLight();   // Přepnutí čelové baterky (nové)
 
     // Metody pro práci s bludištěm
     void genLabyrinth(cv::Mat& map);
@@ -108,11 +112,12 @@ private:
     bool showMenu{ false };             // Je menu zobrazeno?
     int selectedMenuItem{ 0 };          // Aktuálně vybraná položka v menu
     bool vsyncEnabled{ true };          // Je VSync zapnutý?
-    const std::vector<std::string> menuItems{
+    std::vector<std::string> menuItems{
         "Continue",
         "Show FPS: ON",
         "VSync: ON",
         "Full screen: OFF",
+        "Flashlight: OFF",   // Nová položka pro čelovou baterku
         "Exit"
     };
 

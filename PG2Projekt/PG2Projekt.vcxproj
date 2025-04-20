@@ -152,6 +152,7 @@
     <ClInclude Include="OBJloader.hpp" />
     <ClInclude Include="ParticleSystem.hpp" />
     <ClInclude Include="ShaderProgram.hpp" />
+    <ClInclude Include="SpotLight.hpp" />
     <ClInclude Include="TextRenderer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

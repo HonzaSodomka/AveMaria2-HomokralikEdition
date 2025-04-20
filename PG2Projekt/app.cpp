@@ -37,6 +37,25 @@ App::App() :
     dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.2f);    // Ambient složka
     dirLight.diffuse = glm::vec3(0.8f, 0.8f, 0.8f);    // Diffuse složka
     dirLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);   // Specular složka
+
+    // Inicializace spotlightu (čelové baterky)
+    spotLight = SpotLight(
+        glm::vec3(0.0f, 0.0f, 0.0f),          // pozice bude aktualizovaná podle kamery
+        glm::vec3(0.0f, 0.0f, -1.0f),         // směr bude aktualizovaný podle kamery
+        glm::vec3(0.1f, 0.05f, 0.0f),         // ambient - slabé oranžové
+        glm::vec3(1.0f, 0.5f, 0.0f),          // diffuse - výrazně oranžové
+        glm::vec3(1.0f, 0.7f, 0.3f)           // specular - světle oranžové
+    );
+
+    // Užší kužel pro intenzivnější světlo
+    spotLight.SetConeAngles(10.0f, 15.0f);    // Užší úhly kužele pro větší intenzitu
+
+    // Menší útlum pro větší dosah
+    spotLight.SetConstant(1.0f);
+    spotLight.SetLinear(0.045f);              // Poloviční útlum než výchozí
+    spotLight.SetQuadratic(0.0075f);          // Čtvrtinový kvadratický útlum
+
+    spotLightEnabled = false;                 // Defaultně vypnutá
 }
 
 App::~App() {
@@ -226,6 +245,10 @@ void App::initLighting() {
 
     // Deaktivace shaderu
     lightingShader.deactivate();
+
+    // Nastavení uniforms pro spotlight
+    lightingShader.setUniform("spotLightEnabled", spotLightEnabled);
+    spotLight.SetUniforms(lightingShader);
 }
 
 
@@ -335,6 +358,14 @@ void App::updateLighting(float deltaTime) {
 
     // Nastavení uniforms pro osvìtlení
     setupLightingUniforms();
+
+    // Aktualizace pozice a směru spotlightu podle kamery
+    spotLight.SetPosition(camera.Position);
+    spotLight.SetDirection(camera.Front);
+
+    // Nastavení uniforms pro spotlight
+    lightingShader.setUniform("spotLightEnabled", spotLightEnabled);
+    spotLight.SetUniforms(lightingShader);
 }
 
 GLuint App::textureInit(const std::filesystem::path& filepath) {
@@ -883,6 +914,9 @@ void App::key_callback(GLFWwindow* window, int key, int scancode, int action, in
             case GLFW_KEY_SPACE:
                 app->handleMenuSelection();
                 break;
+            case GLFW_KEY_L:  // Přepínání čelové baterky klávesou L
+                app->toggleSpotLight();
+                break;
             case GLFW_KEY_ESCAPE:
                 app->toggleMenu(); // Zavřít menu
                 break;
@@ -1145,7 +1179,10 @@ void App::handleMenuSelection() {
     case 3: // Celá obrazovka
         toggleFullscreen();
         break;
-    case 4: // Ukončit hru
+    case 4: // Flashlight
+        toggleSpotLight();
+        break;
+    case 5: // Exit
         glfwSetWindowShouldClose(window, GLFW_TRUE);
         break;
     }
@@ -1155,4 +1192,19 @@ void App::handleMenuSelection() {
 void App::toggleVsync() {
     vsyncEnabled = !vsyncEnabled;
     glfwSwapInterval(vsyncEnabled ? 1 : 0);
+}
+
+// Metoda pro přepnutí čelovky
+void App::toggleSpotLight() {
+    spotLightEnabled = !spotLightEnabled;
+
+    // Aktualizace položky menu
+    menuItems[4] = "Flashlight: " + std::string(spotLightEnabled ? "ON" : "OFF");
+
+    // Aktualizace uniformu v shaderu
+    lightingShader.activate();
+    lightingShader.setUniform("spotLightEnabled", spotLightEnabled);
+    lightingShader.deactivate();
+
+    std::cout << "Flashlight " << (spotLightEnabled ? "enabled" : "disabled") << std::endl;
 }
